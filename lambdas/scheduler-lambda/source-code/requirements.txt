@@ -1,0 +1,11 @@
+confluent-kafka==2.10.0
+google-auth==2.39.0
+google-auth-oauthlib==1.2.2
+google-api-python-client==2.167.0
+avro-python3
+fastavro
+httpx
+attrs
+authlib
+python-dotenv
+boto3

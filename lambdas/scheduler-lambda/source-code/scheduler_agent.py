@@ -1,0 +1,172 @@
+import json
+import os
+import boto3
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+import uuid
+
+from confluent_kafka.schema_registry import SchemaRegistryClient
+from confluent_kafka.schema_registry.avro import AvroSerializer
+from confluent_kafka import SerializingProducer
+from confluent_kafka.serialization import StringSerializer
+
+# Google Calendar Scopes
+SCOPES = ['https://www.googleapis.com/auth/calendar']
+
+def get_calendar_service_from_aws_secret_manager():
+    secret_name = os.environ['AWS_SECRET_NAME']
+    region = os.environ['AWS_REGION_NAME']
+
+    client = boto3.client(service_name='secretsmanager',
+        region_name=region)
+
+    response = client.get_secret_value(SecretId=secret_name)
+    secret = json.loads(response['SecretString'])
+
+    token_json = secret["token.json"]
+    credentials_json = secret["credentials.json"]
+
+    if(token_json is not None):
+        token_info = json.loads(token_json)
+        creds = Credentials.from_authorized_user_info(token_info, SCOPES)
+    else:
+        client_secrets = json.loads(credentials_json)
+        flow = InstalledAppFlow.from_client_config(client_secrets, SCOPES)
+        creds = flow.run_local_server(port=0)
+
+        secret['token.json'] = creds.to_json()
+        
+        response = client.update_secret(
+            SecretId='my-app/google-auth-files',
+            SecretString=json.dumps(secret))
+        
+    return build('calendar', 'v3', credentials=creds)
+
+
+# Create calendar event
+def schedule_meeting(service, meeting_info):
+    try:
+        meeting_info['organizer'] = os.environ['ORGANIZER']
+        meeting_info['attendees'].append(meeting_info['organizer'])
+
+        event = {
+            'summary': meeting_info.get('title', 'Scheduled Meeting'),
+            'location': meeting_info.get('location', ''),
+            'description': meeting_info.get('description', ''),
+            'start': {
+                'dateTime': meeting_info['start'],  # e.g., "2025-04-23T10:00:00-07:00"
+                'timeZone': 'UTC',
+            },
+            'end': {
+                'dateTime': meeting_info['end'],  # e.g., "2025-04-23T11:00:00-07:00"
+                'timeZone': 'UTC',
+            },
+            'attendees': [{'email': email} for email in meeting_info.get('attendees', [])],
+            'reminders': {
+                'useDefault': False,
+                'overrides': [
+                    {'method': 'email', 'minutes': 24 * 60},
+                    {'method': 'popup', 'minutes': 10}
+                ]
+            },
+            "organizer": {
+                "email": meeting_info['organizer']
+            },
+            'conferenceData': {
+                'createRequest': {
+                    'requestId': str(uuid.uuid1()),
+                    'conferenceSolutionKey': {
+                        'type': 'hangoutsMeet'  
+                    }
+                }
+            },
+        }
+
+        print(f"Meeting event : {event}")
+
+        event = service.events().insert(calendarId='primary', body=event, conferenceDataVersion=1, sendUpdates='all').execute()
+        event_link = event.get('htmlLink')
+        print(f"Event created: {event_link}")
+        
+
+        meet_link = event.get('conferenceData', {}).get('entryPoints', [{}])[0].get('uri')
+        print(f" Google Meet link: {meet_link}")
+
+        return (event_link, None)
+    
+    except Exception as e:
+        print(f"Exception occurred in schedule_meeting fn : {e}")
+        return (None, str(e))
+
+
+def to_dict(order, ctx):
+    return order
+
+
+def produce_event_to_kafka(event, event_link, status, error_message):
+    try:
+        topic_name = os.environ['TOPIC_NAME']
+
+        bootstrap_server = os.environ['BOOTSTRAP_ENDPOINT']
+        kafka_api_key = os.environ['KAFKA_API_KEY']
+        kafka_api_secret = os.environ['KAFKA_API_SECRET']
+
+        schema_registry_endpoint = os.environ['SCHEMA_REGISTRY_ENDPOINT']
+        sr_api_key = os.environ['SCHEMA_REGISTRY_API_KEY']
+        sr_api_secret = os.environ['SCHEMA_REGISTRY_API_SECRET']
+
+        schema_registry_conf = {
+            'url': schema_registry_endpoint,
+            'basic.auth.user.info': f'{sr_api_key}:{sr_api_secret}',
+        }
+
+        schema_str = open("scheduler_agent_response.avsc", "r").read()
+        schema_registry_client = SchemaRegistryClient(schema_registry_conf)
+
+        # string_serializer = StringSerializer('utf_8')
+        avro_serializer = AvroSerializer(
+            schema_registry_client=schema_registry_client,
+            schema_str=schema_str,
+            to_dict=to_dict
+        )
+
+        # Kafka producer configuration
+        producer_conf = {
+            'bootstrap.servers': bootstrap_server,
+            'sasl.mechanisms': 'PLAIN',
+            'security.protocol': 'SASL_SSL',
+            'sasl.username': kafka_api_key,
+            'sasl.password': kafka_api_secret,
+            # 'key.serializer': string_serializer,
+            'value.serializer': avro_serializer
+        }
+
+        producer = SerializingProducer(producer_conf)
+        
+        event['status'] = 'success' if status else 'failed'
+        event['event_link'] =  event_link
+        event['error_message'] = error_message
+
+        producer.produce(topic=topic_name, value=event)
+        producer.flush()
+
+        print(f"Produced event to {topic_name} topic successfully!")
+
+    except Exception as e:
+        print(f"Exception occurred in produce_event_to_kafka fn : {e}")
+
+
+def ensure_list_of_strings(value):
+    # Case 1: Already a list of strings
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        return value
+    # Case 2: List with one item that's a JSON-encoded list of strings
+    elif isinstance(value, list) and len(value) == 1 and isinstance(value[0], str):
+        try:
+            parsed = json.loads(value[0])
+            if isinstance(parsed, list) and all(isinstance(item, str) for item in parsed):
+                return parsed
+        except json.JSONDecodeError:
+            pass
+    raise ValueError("Input is not or cannot be converted to a list of strings.")
