@@ -100,6 +100,31 @@ def schedule_meeting(service, meeting_info):
         return (None, str(e))
 
 
+def sns_publisher(meeting_info):
+    try:
+        sns = boto3.client('sns')
+
+        meeting_info['organizer'] = os.environ['ORGANIZER']
+        meeting_info['attendees'].append(meeting_info['organizer'])
+
+        sns_arn = os.environ['SNS_ARN']
+
+        response = sns.publish(
+                TopicArn=sns_arn,
+                Message=json.dumps({'default': json.dumps(meeting_info)}),
+                MessageStructure='json'
+            )
+            
+        print(f"Response : {response}")
+
+        print("Message sent! Message ID:", response['MessageId'])
+
+        return (response['MessageId'], None)
+
+    except Exception as e:
+        print(f"Exception occurred in sns_publisher fn : {e}")
+        return (None, str(e))
+
 def to_dict(order, ctx):
     return order
 

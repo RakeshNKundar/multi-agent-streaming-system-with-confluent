@@ -1,5 +1,5 @@
 import json
-from scheduler_agent import get_calendar_service_from_aws_secret_manager, schedule_meeting, produce_event_to_kafka, ensure_list_of_strings
+from scheduler_agent import get_calendar_service_from_aws_secret_manager, schedule_meeting, produce_event_to_kafka, ensure_list_of_strings, sns_publisher
 
 def lambda_handler(event, context):
 
@@ -14,9 +14,9 @@ def lambda_handler(event, context):
         meeting_info['end'] = schedule_event['end']
         meeting_info['attendees'] = ensure_list_of_strings(schedule_event['attendees'])
 
-        calendar_service = get_calendar_service_from_aws_secret_manager()
+        # calendar_service = get_calendar_service_from_aws_secret_manager()
 
-        event_link, error_message = schedule_meeting(calendar_service, meeting_info)
+        event_link, error_message = sns_publisher(meeting_info)
 
         is_meeting_successful = error_message is None
 
