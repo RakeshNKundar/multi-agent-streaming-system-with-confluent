@@ -60,7 +60,7 @@ Resources:
       Role: !GetAtt SqlAgentLambdaExecutionRole.Arn
       Code:
         S3Bucket: !Ref GamedayArtifactsBucket   ## Needs Update
-        S3Key: path/to/your/lambda-code.zip ## Needs update
+        S3Key: sql-agent-lambda.zip ## Needs update
       Layers:
         - !Ref SqlAgentLambdaLayer
       Timeout: 900
