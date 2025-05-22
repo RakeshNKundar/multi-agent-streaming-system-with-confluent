@@ -1,0 +1,34 @@
+{
+  "fields": [
+    {
+      "name": "message_id",
+      "type": "string"
+    },
+{
+      "name": "employee_id",
+      "type": "string"
+    },
+    {
+      "name": "user_email",
+      "type": "string"
+    },
+    {
+      "name": "session_id",
+      "type": "string"
+    },
+    {
+      "name": "message",
+      "type": "string"
+    },
+    {
+      "name": "timestamp",
+      "type": {
+        "logicalType": "timestamp-millis",
+        "type": "long"
+      }
+    }
+  ],
+  "name": "queries",
+  "namespace": "com.assistant.messages",
+  "type": "record"
+}

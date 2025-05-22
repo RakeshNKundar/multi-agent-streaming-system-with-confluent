@@ -18,7 +18,7 @@ Participants will walk away with hands-on experience building a production-grade
 
 ## 🗺️ Architecture
 
-![Architecture Diagram](images/architecture.png)
+![Architecture Diagram](assets/img/architecture.png)
 
 This architecture includes:
 - **Orchestrator Agent**: Uses Bedrock LLM to decide which agents to invoke based on incoming user queries.
@@ -511,4 +511,141 @@ Step-by-step Setup:
 }
 ```
 
-## Task 6: Now joining the results and orchestrator metadata 
+## Task 06 – Final Agent Builder Join & response input Structuring
+Now that all three agents (SQL, Search, Scheduler) have emitted results, we perform a final conditional join with the orchestrator metadata. This gives us a fully enriched context for each user query.
+
+🔹 Step 1: Join All Agent Results
+This query joins orchestrator_metadata with the three agent response topics conditionally, based on which agents were triggered (sql_agent, search_agent, scheduler_agent).
+```sql
+CREATE TABLE enriched_query_with_agent_responses(
+event_time TIMESTAMP(3),
+  WATERMARK FOR event_time AS event_time - INTERVAL '1' SECOND)
+ with('changelog.mode'='append')  AS
+SELECT
+  o.sql_agent,
+  o.sql_agent_query,
+  o.sql_agent_user_email,
+  o.sql_agent_employee_id,
+  o.search_agent,
+  o.search_agent_query,
+  o.scheduler_agent,
+  o.scheduler_title,
+  o.scheduler_description,
+  o.scheduler_location,
+  o.scheduler_start,
+  o.scheduler_end,
+  o.scheduler_attendees,
+  o.execution_sequence,
+  o.`$rowtime` as event_time,
+  o.message_id,
+  o.user_email,
+  o.session_id,
+  o.employee_id,
+  o.message,
+  CASE 
+        WHEN o.sql_agent = 'true' 
+         AND s.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '5' MINUTE 
+        THEN s.sql_result 
+        ELSE NULL 
+      END AS employee_info,
+  CASE 
+        WHEN o.search_agent = 'true' 
+         AND c.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '5' MINUTE 
+        THEN c.search_results 
+        ELSE NULL 
+      END AS additional_context
+  -- Add scheduler result fields if needed
+FROM orchestrator_metadata o , sql_result s ,context_results c ,scheduler_agent_response sch
+  where o.message_id = s.message_id
+  AND o.sql_agent = 'true'
+  AND s.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '5' MINUTE
+  OR ( o.message_id = c.message_id
+  AND o.search_agent = 'true'
+  AND c.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '5' MINUTE )
+  OR ( o.message_id = sch.message_id
+  AND o.scheduler_agent = 'true'
+  AND sch.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '5' MINUTE) ;
+
+```
+🔹 Step 2: Filter Latest Version per Message
+
+Now that agent data is joined with metadata, we only want the most recent version per message ID, so we don’t emit multiple rows per 10-second interval.
+```sql
+CREATE TABLE final_response_builder AS 
+SELECT message_id, employee_info, additional_context
+FROM (
+    SELECT *,
+           ROW_NUMBER() OVER (
+               PARTITION BY window_start, window_end, message_id 
+               ORDER BY event_time DESC
+           ) AS row_num
+    FROM TABLE(
+        TUMBLE(TABLE final_enriched_output_with_inner_joinv2, 
+               DESCRIPTOR(event_time), 
+               INTERVAL '10' SECOND)
+    )
+)
+WHERE row_num = 1;
+
+```
+Explanation:
+
+- We use a TUMBLE window on the joined table to group outputs every 10 seconds.
+
+- The ROW_NUMBER() function selects the latest event per message ID within the window.
+
+- This filters out older or duplicate outputs and prepares a clean stream for the final response.
+
+
+## Task 07 – Final Response Generation (Natural Language)
+Once all agent responses are joined and filtered into a clean stream (final_response_builder), we use a Bedrock LLM to formulate a natural language answer. This is the final response a user would see in Slack, email, or a chatbot.
+
+🔹 Step 1: Define Prompt Template for Bedrock
+We'll send a structured prompt to the LLM, containing:
+- The original user message
+- Agent metadata
+- Results from each agent
+- Execution sequence (optional but useful for reasoning)
+
+
+```sql
+CREATE TABLE user_friendly_agent_response
+WITH ('changelog.mode' = 'append') AS
+SELECT 
+  message_id,
+  ML_PREDICT(
+    'BedrockFinalFormatter',
+    'You are a helpful workplace assistant. Summarize the structured agent responses below into a natural and helpful reply to the user.' || '\n\n' ||
+
+    '---' || '\n' ||
+    'Original message: ' || message || '\n\n' ||
+
+    'SQL Agent Triggered: ' || sql_agent || '\n' ||
+    'Query: ' || sql_agent_query || '\n' ||
+    'Employee/Department Level Info Result obtained from SQL agent: ' || employee_info || '\n\n' ||
+
+    'Search Agent Triggered: ' || search_agent || '\n' ||
+    'Search Query: ' || search_agent_query || '\n' ||
+    'Search Result: ' || additional_context || '\n\n' ||
+
+    'Scheduler Agent Triggered: ' || scheduler_agent || '\n' ||
+    'Meeting Title: ' || scheduler_title || '\n' ||
+    'Description: ' || scheduler_description || '\n' ||
+    'Time: ' || scheduler_start || ' to ' || scheduler_end || '\n' ||
+    'Attendees: ' || scheduler_attendees || '\n\n' ||
+
+    'Execution Sequence: ' || execution_sequence || '\n\n' ||
+
+    'Generate a complete, professional answer below:\n'
+  ) AS final_response_text
+FROM enriched_query_with_agent_responses;
+```
+
+✅ Example Output
+If a user asked:
+"Can you schedule a 30-minute meeting with Alice and show me her department's last month performance?"
+
+And all agents responded, the final result might be:
+
+"I've scheduled a 30-minute meeting titled 'Project Discussion' with Alice at 3 PM tomorrow. Her department's performance for last month shows a 12% increase in output. I've also attached a document detailing her recent projects."
+

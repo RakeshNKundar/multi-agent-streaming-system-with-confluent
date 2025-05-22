@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Sql Agent Lambda Function
+
+Resources:
+
+  GamedayArtifactsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AWS::StackName}-gameday-artifacts"
+      VersioningConfiguration:
+        Status: Enabled
+
+  SqlAgentLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: gameday-sql-agent-lambda-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+        ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AmazonBedrockFullAccess
+      Policies:
+        - PolicyName: gameday-lambda-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+
+  SqlAgentLambdaLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName: sql-agent-lambda-layer
+      Description: Lambda layer with all the import modules used by the Sql agent lambda function
+      Content:
+        S3Bucket: !Ref GamedayArtifactsBucket 
+        S3Key: sql-agent-lambda-layer.zip  ## Needs update
+      CompatibleRuntimes:
+        - python3.12
+      CompatibleArchitectures:
+        - x86_64
+
+  SqlAgentLambdaFunctionName:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: gameday-sql-agent
+      Architectures: 
+        - x86_64
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt SqlAgentLambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref GamedayArtifactsBucket   ## Needs Update
+        S3Key: path/to/your/lambda-code.zip ## Needs update
+      Layers:
+        - !Ref SqlAgentLambdaLayer
+      Timeout: 900
+      MemorySize: 10240
+      Environment:
+        Variables: ## Needs update on all ENV vaiable values
+          AWS_REGION_NAME: <my-secret-name>
+          BOOTSTRAP_ENDPOINT: <bootstrap-server-endpoint>
+          KAFKA_API_KEY: <kafka-api-key>
+          KAFKA_API_SECRET: <kafka-api-secret>
+          SCHEMA_REGISTRY_ENDPOINT: <schema-registry-endpoint>
+          SCHEMA_REGISTRY_API_KEY: <schema-registry-api-key>
+          SCHEMA_REGISTRY_API_SECRET: <schema-registry-api-secret>
+          TOPIC_NAME: <topic-name>
+
+Outputs:
+  SqlAgentLambdaFunctionName:
+    Value: !Ref SqlAgentLambdaFunction
+    Description: Name of the SQL Agent Lambda function
+
+  SqlAgentLambdaLayerName:
+    Value: !Ref SqlAgentLambdaLayer
+    Description: Name of the Lambda layer created for SQL Agent Lambda Fn.
+
+  
