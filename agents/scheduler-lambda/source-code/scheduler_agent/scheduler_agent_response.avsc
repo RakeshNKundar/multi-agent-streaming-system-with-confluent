@@ -1,0 +1,113 @@
+{
+  "fields": [
+    {
+      "default": null,
+      "name": "title",
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    {
+      "default": null,
+      "name": "description",
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    {
+      "default": null,
+      "name": "location",
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    {
+      "default": null,
+      "name": "start",
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    {
+      "default": null,
+      "name": "end",
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    {
+      "name": "attendees",
+      "type": {
+        "items": "string",
+        "type": "array"
+      }
+    },
+    {
+      "default": null,
+      "name": "organizer",
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    {
+      "default": null,
+      "name": "status",
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    {
+      "default": null,
+      "name": "event_link",
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    {
+      "default": null,
+      "name": "error_message",
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    {
+      "name": "message_id",
+      "type": "string"
+    },
+    {
+      "name": "employee_id",
+      "type": "string"
+    },
+    {
+      "name": "user_email",
+      "type": "string"
+    },
+    {
+      "name": "session_id",
+      "type": "string"
+    },
+    {
+      "name": "message",
+      "type": "string"
+    },
+    {
+      "name": "timestamp",
+      "type": {
+        "logicalType": "timestamp-millis",
+        "type": "long"
+      }
+    }
+  ],
+  "name": "scheduler_agent_response",
+  "namespace": "com.assistant.messages",
+  "type": "record"
+}
