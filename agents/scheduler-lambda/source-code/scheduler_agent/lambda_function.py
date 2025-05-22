@@ -13,12 +13,13 @@ def lambda_handler(event, context):
         meeting_info['start'] = schedule_event['start']
         meeting_info['end'] = schedule_event['end']
         meeting_info['attendees'] = ensure_list_of_strings(schedule_event['attendees'])
+        meeting_info['organizer'] = schedule_event['user_email']
 
         # calendar_service = get_calendar_service_from_aws_secret_manager()
 
         event_link, error_message = sns_publisher(meeting_info)
 
-        is_meeting_successful = error_message is None
+        is_sns_publish_successful = error_message is None
 
         meeting_info['message_id'] = schedule_event['message_id']
         meeting_info['user_email'] = schedule_event['user_email']
@@ -27,7 +28,7 @@ def lambda_handler(event, context):
         meeting_info['message'] = schedule_event['message']
         meeting_info['timestamp'] = schedule_event['timestamp']
 
-        produce_event_to_kafka(meeting_info, event_link, is_meeting_successful, error_message)
+        produce_event_to_kafka(meeting_info, is_sns_publish_successful, error_message)
     
     return {
         'statusCode': 200,
