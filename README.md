@@ -1,4 +1,4 @@
-# 🧠 Multi-Agent Workplace Engagement System — Workshop
+# 🧠 Multi-Agent Workplace Engagement System 
 
 Welcome to the workshop on building a **Multi-Agent System for Workplace Engagement** using **Apache Kafka**, **Apache Flink**, and **Amazon Bedrock**. In this workshop, you'll learn to orchestrate multiple intelligent agents that collaborate to handle real-world workplace queries like scheduling meetings, retrieving company data, or answering knowledge base questions.
 
