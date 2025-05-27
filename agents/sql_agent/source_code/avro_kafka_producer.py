@@ -74,8 +74,8 @@ def produce(result):
     Args:
         result (dict): Dictionary containing the result data matching the schema
     """
-    topic = 'sql_result'
-    schema = "sql_result.avsc"
+    topic = os.getenv("sql_agent_result_topic")
+    schema = "sql_agent_response.avsc"
 
     # Read schema file
     path = os.path.realpath(os.path.dirname(__file__))

@@ -6,8 +6,8 @@ locals {
   mongo_workshop_database            = "workplace_knowledgebase"
   mongo_workshop_database_user       = "confluent"
   mongo_workshop_database_pass       = "genaiwithstreaming"
-  mongo_workshop_database_collection = "knowledge_embeddings"
-  mongo_workshop_database_index      = "knowledge_policies"
+  mongo_workshop_database_collection = "knowledge_collection"
+  mongo_workshop_database_index      = "knowledge_index"
 }
 
 resource "mongodbatlas_database_user" "default" {
@@ -51,6 +51,9 @@ resource "mongodbatlas_cluster" "default" {
 }
 
 resource "null_resource" "seed_mongodb" {
+  triggers = {
+    always_run = timestamp()
+  }
   provisioner "local-exec" {
     command = <<EOT
       mongoimport \

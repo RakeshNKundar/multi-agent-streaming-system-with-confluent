@@ -158,7 +158,7 @@ def to_dict(order, ctx):
 
 def produce_event_to_kafka(event, status, error_message):
     try:
-        topic_name = os.environ['TOPIC_NAME']
+        topic_name = os.environ['scheduler_agent_result_topic']
 
         bootstrap_server = os.environ['BOOTSTRAP_ENDPOINT']
         kafka_api_key = os.environ['KAFKA_API_KEY']

@@ -18,8 +18,8 @@ resource "aws_s3_object" "sql_agent_layer_zip" {
 resource "aws_s3_object" "scheduler_agent_layer_zip" {
   bucket = aws_s3_bucket.lambda_layers.bucket
   key    = "layers/scheduler_agent_layer.zip"
-  source = "../agents/scheduler_agent/artifacts/scheduler-lambda-layer.zip"
-  etag   = filemd5("../agents/scheduler_agent/artifacts/scheduler-lambda-layer.zip")
+  source = "../agents/scheduler_agent/artifacts/scheduler_lambda_layer.zip"
+  etag   = filemd5("../agents/scheduler_agent/artifacts/scheduler_lambda_layer.zip")
 }
 
 resource "random_id" "suffix" {
@@ -51,7 +51,7 @@ resource "aws_lambda_layer_version" "sql_agent_layer" {
 
 resource "aws_lambda_layer_version" "scheduler_agent_layer" {
   layer_name          = "scheduler_agent_layer"
-  compatible_runtimes = ["python3.12"]
+  compatible_runtimes = ["python3.13"]
   s3_bucket           = aws_s3_bucket.lambda_layers.bucket
   s3_key              = aws_s3_object.scheduler_agent_layer_zip.key
   description         = "scheduler_agent_layer 1"
@@ -87,10 +87,15 @@ data "archive_file" "scheduler_agent_lambda" {
 }
 
 resource "aws_lambda_function" "sql_agent" {
-  function_name    = "sql_agent"
-  role             = aws_iam_role.lambda_exec_role.arn
-  handler          = "lambda_function.lambda_handler"
-  runtime          = "python3.12"
+  function_name = "sql_agent"
+  role          = aws_iam_role.lambda_exec_role.arn
+  handler       = "main.lambda_handler"
+  runtime       = "python3.12"
+  timeout       = 900
+  memory_size   = 10240
+  ephemeral_storage {
+    size = 10240
+  }
   filename         = data.archive_file.sql_agent_lambda.output_path
   source_code_hash = filebase64sha256(data.archive_file.sql_agent_lambda.output_path)
   layers           = [aws_lambda_layer_version.sql_agent_layer.arn]
@@ -112,12 +117,21 @@ resource "aws_cloudwatch_log_group" "lambda_log_group_sql_agent" {
   retention_in_days = 14
 }
 
+resource "aws_sns_topic" "gameday_sns_topic" {
+  name = "gameday-sns-topic-new"
+}
+
 resource "aws_lambda_function" "scheduler_agent" {
-  function_name    = "scheduler_agent"
-  role             = aws_iam_role.lambda_exec_role.arn
-  handler          = "lambda_function.lambda_handler"
-  runtime          = "python3.12"
-  filename         = data.archive_file.scheduler_agent_lambda.output_path
+  function_name = "scheduler_agent"
+  role          = aws_iam_role.lambda_exec_role.arn
+  handler       = "lambda_function.lambda_handler"
+  runtime       = "python3.13"
+  filename      = data.archive_file.scheduler_agent_lambda.output_path
+  timeout       = 900
+  memory_size   = 10240
+  ephemeral_storage {
+    size = 10240
+  }
   source_code_hash = filebase64sha256(data.archive_file.scheduler_agent_lambda.output_path)
   layers           = [aws_lambda_layer_version.scheduler_agent_layer.arn]
   environment {
@@ -129,6 +143,7 @@ resource "aws_lambda_function" "scheduler_agent" {
       SCHEMA_REGISTRY_API_SECRET   = confluent_api_key.schema-registry-api-key.secret
       SCHEMA_REGISTRY_ENDPOINT     = confluent_schema_registry_cluster.default.rest_endpoint
       scheduler_agent_result_topic = "<Enter_scheduler_agent_result_topic_name>"
+      SNS_ARN                      = aws_sns_topic.gameday_sns_topic.arn
     }
   }
 }

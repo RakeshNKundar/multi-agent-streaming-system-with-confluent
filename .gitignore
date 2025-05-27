@@ -19,3 +19,4 @@ scheduler_agent_lambda.zip
 env/
 scheduler-lambda.zip
 queries/
+.cc-dotfiles/
