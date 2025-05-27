@@ -11,15 +11,19 @@ from confluent_kafka.schema_registry.avro import AvroSerializer
 from confluent_kafka import SerializingProducer
 from confluent_kafka.serialization import StringSerializer
 
-from datetime import datetime
+from datetime import datetime, timedelta
+
 
 # Google Calendar Scopes
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 
-def format_datetime(iso_str):
-    """Format ISO 8601 datetime to a readable format."""
-    dt = datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
-    return dt.strftime("%B %d, %Y at %I:%M %p %Z")
+def format_datetime(iso_str, hours=0):
+    try:
+        """Format ISO 8601 datetime to a readable format."""
+        dt = datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
+        return dt.strftime("%B %d, %Y at %I:%M %p %Z")
+    except Exception as e:
+        return datetime.now() + timedelta(days=1, hours=hours)
 
 
 def get_calendar_service_from_aws_secret_manager():
@@ -116,7 +120,7 @@ def sns_publisher(meeting):
 
         # Format start and end times
         start_time = format_datetime(meeting['start'])
-        end_time = format_datetime(meeting['end'])
+        end_time = format_datetime(meeting['end'], hours=1)
 
         # Format attendee list
         attendees = "\n".join(f"- {email}" for email in meeting['attendees'])
