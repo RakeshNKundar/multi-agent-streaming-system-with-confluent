@@ -78,12 +78,9 @@ This architecture includes:
 
 1. ### Clone the workshop Github Repo on your local
 ```bash
-git clone https://github.com/RakeshNKundar/genai-gameday
+git clone https://github.com/RakeshNKundar/multi-agent-streaming-system-with-confluent.git
 ```
 
-```bash
-cd realtime-rag-workshop
-```
 2. ### Create a Cloud API Key
 Create cloud api key for your confluent cloud account with resource scope as Cloud resource management.
 - Go to https://confluent.cloud/settings/api-keys 
@@ -114,7 +111,8 @@ export TF_VAR_cc_cloud_api_key="<Confluent Cloud API Key>"
 export TF_VAR_cc_cloud_api_secret="<Confluent Cloud API Secret>"
 export TF_VAR_mongodbatlas_public_key="<MongoDB Public API Key>"
 export TF_VAR_mongodbatlas_private_key="<MongoDB Private API Key>"
-
+export AWS_ACCESS_KEY_ID="<AWS Access Key ID"
+export AWS_SECRET_ACCESS_KEY="<AWS Access Key Secret>"
 ```
 2. After Setting the variables, run:
 
@@ -166,9 +164,8 @@ WITH
 Replace <message_field> value before running the command.
 
 ```sql
-CREATE TABLE `orchestrator_metadata`
- AS SELECT 
-    response AS output,
+CREATE TABLE `orchestrator_metadata` AS 
+SELECT 
     JSON_VALUE(response, '$.sql_agent') AS sql_agent,
     JSON_VALUE(response, '$.sql_agent_metadata.query') AS sql_agent_query,
     JSON_VALUE(response, '$.sql_agent_metadata.user_email') AS sql_agent_user_email,
@@ -208,7 +205,6 @@ Descriptions of agents:
 
 Return the result in strict JSON using this structure:
 
-```json
 {
   "sql_agent": true | false,
   "sql_agent_metadata": {
@@ -234,7 +230,8 @@ Return the result in strict JSON using this structure:
 
   "sequence": ["scheduler_agent", "search_agent", "sql_agent"]
 }
-\```
+
+  
 ' || '\n User prompt: ' ||
             '{
    message_id: ' || message_id || ','
@@ -245,13 +242,14 @@ Return the result in strict JSON using this structure:
     )
 );
 ```
+
 5. Insert a sample query in the `queries` topic to test out our flink agent. 
 
 ```json
 {
   "message_id": "d7a97c0a-8e5b-4c65-90cb-7ea5934ae6d4",
   "employee_id": "E001",
-  "user_email": "vdeshpande@confluent.io",
+  "user_email": "john.smith@company.com",
   "session_id": "sess-01",
   "message": "What is company's maternal leave policy? How much am I eligible for ?",
   "timestamp": 1746717000000
@@ -263,9 +261,9 @@ Return the result in strict JSON using this structure:
 6. Take a look at the agent flags and observe which are true for the input we have given.
 
 7. Try It Yourself ✏️:
-    1. How would you change the prompt to exclude the SQL agent from being called?
+    1. How would you change the prompt to include the SQL agent for being called?
     2. What metadata is required for the scheduler agent?
-    3. Publish one more query containing “schedule a 1:1 with my manager”, which agents will be invoked now?
+    3. Publish one more query containing “schedule a 1:1 with my manager <your email> ”, which agents will be invoked now?
 
 ## Task 2: Setup the Workflow distribution 
 Now that the Orchestrator Agent is up and running, it's time to activate the specialized agents that perform actual tasks.🧩 Concept Recap
@@ -274,7 +272,7 @@ Each agent is an independent component in the system. Here's a quick breakdown:
 🔎 Vector Search Agent: Uses semantic embeddings to retrieve contextually relevant documents from a MongoDB Vector Store.
 📅 Scheduler Agent: Automates meeting scheduling using structured metadata like title, time, and attendees.
 
-These agents listen on their respective Kafka input topics and output results to their own response topics (e.g., sql_result, context_result, scheduler_result).
+These agents listen on their respective Kafka input topics and output results to their own response topics (e.g., sql_agent_response, context_result, scheduler_result).
 
 So we now create three router queries which routes the message to it's repective agent inputs. 
 
@@ -297,8 +295,10 @@ where <Enter the condition here>;
 ```
 
 🔹 Search Agent (Vector)
+Can you add the flag condition which will help us determine routing the request to search_agent_input ?
+
 ```sql
-CREATE TABLE search_agent_v2 AS 
+CREATE TABLE search_agent_input AS 
 SELECT 
     CAST(message AS BYTES) AS key,
     search_agent_query as query, 
@@ -309,10 +309,12 @@ SELECT
     session_id , 
     `timestamp`
 FROM orchestrator_metadata 
-where search_agent='true'; 
+where <Enter the condition here>; 
 ```
 
 🔹 Scheduler Agent
+Can you add the flag condition which will help us determine routing the request to scheduler_agent_input ?
+
 ```sql
 CREATE TABLE scheduler_agent_input AS 
 SELECT 
@@ -332,7 +334,7 @@ SELECT
   REGEXP_REPLACE(scheduler_attendees, '\\["|\\"]', ''), '","'
 ) AS attendees
 FROM orchestrator_metadata
-WHERE scheduler_agent = 'true';
+WHERE <Enter the condition here>; 
 ```
 Verify the data in the respective topics - **sql_agent_input**, **search_agent_v2** and **scheduler_agent_input**.If any of these topics are empty, it likely means you haven’t triggered a user query that would activate the corresponding agent.
 
@@ -344,9 +346,9 @@ Create a few test queries that would intentionally route to each of these agents
 {
   "message_id": "6f0e8192-9a14-49a7-9a22-6fc324d7d4co",
   "employee_id": "E001",
-  "user_email": "vdeshpande@confluent.io",
+  "user_email": "john.smith@company.com",
   "session_id": "sess-01",
-  "message": "How many people are in the engineering team?",
+  "message": "How many people are in the engineering department?",
   "timestamp": 1746717000000
 }
 ```
@@ -356,9 +358,9 @@ Create a few test queries that would intentionally route to each of these agents
 {
   "message_id": "8f0e8192-9a14-49a7-9a22-6fc324d7d4ci",
   "employee_id": "E001",
-  "user_email": "vdeshpande@confluent.io",
+  "user_email": "john.smith@company.com",
   "session_id": "sess-01",
-  "message": "What is company's maternal leave policy? How much am I eligible for ?",
+  "message": "Can you help me understand hybrid Compensation & performance structure ?",
   "timestamp": 1746717000000
 }
 ```
@@ -368,9 +370,9 @@ Create a few test queries that would intentionally route to each of these agents
 {
   "message_id": "9f0e8192-9a14-49a7-9a22-6fc324d7ddghe",
   "employee_id": "E001",
-  "user_email": "vdeshpande@confluent.io",
+  "user_email": "john.smith@company.com",
   "session_id": "sess-01",
-  "message": "What is company's maternal leave policy? How much am I eligible for ?",
+  "message": "Schedule a skip-level meeting with my manager  <your_email_id> next week",
   "timestamp": 1746717000000
 }
 ```
@@ -381,6 +383,25 @@ This will help populate the input topics and allow you to test the complete agen
 This task helps you build a fully managed Lambda Kafka Sink Connector that routes your queries to a SQL lambda agent.
 Goal:
 Stream sql_agent_input Kafka topic data directly to your AWS Lambda.
+
+Before creating the connector, make sure the Lambda is properly configured.
+- Open the AWS Console.
+- Search for and open your Lambda function (e.g., sql_agent).
+- Add the following environment variables to the function:
+- Add below enviorment variable values: 
+
+```bash
+BOOTSTRAP_ENDPOINT=<your-confluent-bootstrap-endpoint>
+KAFKA_API_KEY=<your-kafka-api-key>
+KAFKA_API_SECRET=<your-kafka-api-secret>
+SCHEMA_REGISTRY_API_KEY=<your-schema-registry-api-key>
+SCHEMA_REGISTRY_API_SECRET=<your-schema-registry-api-secret>
+SCHEMA_REGISTRY_ENDPOINT=https://<your-schema-registry-endpoint>
+TOPIC_NAME=sql_agent_response
+```
+
+Once your Lambda is ready, proceed to configure the Confluent-managed Kafka Sink Connector to invoke this function on every message received in sql_agent_input.
+
 Step-by-step Setup:
 1. Go to Confluent Cloud > Connectors.
 
@@ -389,26 +410,37 @@ Step-by-step Setup:
 3. Fill in the relevant configuration details below and deploy the connector.
 ```json
 {
-  "name": "sql-agent-sink",
   "config": {
-    "connector.class": "io.confluent.connect.http.HttpSinkConnector",
     "topics": "sql_agent_input",
+    "schema.context.name": "default",
+    "input.data.format": "AVRO",
+    "connector.class": "LambdaSink",
+    "name": "SqlAgentSink",
+    "kafka.auth.mode": "KAFKA_API_KEY",
+    "kafka.api.key": "<YOUR_KAFKA_API_KEY>",
+    "kafka.api.secret": "****************************************************************",
+    "authentication.method": "Access Keys",
+    "aws.access.key.id": "********************",
+    "aws.secret.access.key": "****************************************",
+    "aws.lambda.configuration.mode": "single",
+    "aws.lambda.function.name": "sql_agent",
+    "aws.lambda.invocation.type": "sync",
+    "aws.lambda.batch.size": "20",
+    "record.converter.class": "JsonKeyValueConverter",
+    "aws.lambda.socket.timeout": "50000",
+    "behavior.on.error": "log",
+    "max.poll.interval.ms": "300000",
+    "max.poll.records": "500",
     "tasks.max": "1",
-    "http.api.url": "<YOUR_SQL_LAMBDA_ENDPOINT>",
-    "reporter.bootstrap.servers": "<BOOTSTRAP_SERVERS>",
-    "confluent.topic.bootstrap.servers": "<BOOTSTRAP_SERVERS>",
-    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
-    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
-    "value.converter.schemas.enable": false,
-    "header.converter": "org.apache.kafka.connect.storage.SimpleHeaderConverter",
-    "errors.tolerance": "all",
-    "errors.log.enable": "true",
-    "errors.deadletterqueue.topic.name": "sql_agent_dlq",
-    "errors.deadletterqueue.context.headers.enable": "true"
+    "auto.restart.on.user.error": "true",
+    "value.converter.decimal.format": "BASE64",
+    "value.converter.reference.subject.name.strategy": "DefaultReferenceSubjectNameStrategy",
+    "value.converter.value.subject.name.strategy": "TopicNameStrategy",
+    "key.converter.key.subject.name.strategy": "TopicNameStrategy"
   }
 }
-
 ```
+
 
 ## Task 4: Context Retrieval via Vector Search 
 We now add intelligence to our Research Agent using Amazon Bedrock embeddings + MongoDB vector search.
@@ -423,6 +455,19 @@ confluent flink connection create bedrock-embedding-connection \
   --endpoint https://bedrock-runtime.us-east-1.amazonaws.com/model/amazon.titan-embed-text-v1/invoke \
   --aws-access-key <Replace with your own access key> \
   --aws-secret-key <Replace with your own access secret >
+```
+
+
+2. Create a FlinkSQL connection to connect to MongoDB .Please replace your own endpoint , username and passowrd before running the command.
+```bash
+confluent flink connection create mongodb-vector-search-connection \
+  --cloud AWS \
+  --region us-east-1 \
+  --type mongodb \
+  --endpoint ${atlas_endpoint} \
+  --username ${atlas_username} \
+  --password ${atlas_password} \
+  --environment ${ENV_ID}
 ```
 
 Log in to your confluent cloud env and access flink workspace(UI tool to run your flinksql queries) to run following queries:
@@ -464,10 +509,10 @@ CREATE TABLE mongodb (
  contentEmbedding ARRAY<FLOAT>
 ) WITH (
   'connector' = 'mongodb',
-  'mongodb.connection' = 'mongodb-fed-search-connection',
+  'mongodb.connection' = 'mongodb-vector-search-connection',
   'mongodb.database' = '<knowledge_base>',
   'mongodb.collection' = '<collection_name>',
-  'mongodb.index' = 'vector_index',
+  'mongodb.index' = '<index_name>',
   'mongodb.embedding_column' = 'contentEmbedding',
   'mongodb.numCandidates' = '1'
 );
@@ -475,8 +520,26 @@ CREATE TABLE mongodb (
 5. Perform Vector Search to Retrieve Results
 ```sql
 CREATE TABLE context_results AS
-SELECT query,message_id,employee_id,user_email,message,session_id,`timestamp`,search_results  FROM search_embeddings,
-  LATERAL TABLE(VECTOR_SEARCH(mongodb, 1,DESCRIPTOR(contentEmbedding), search_embeddings.query_embedding));
+SELECT
+  query,
+  message_id,
+  employee_id,
+  user_email,
+  message,
+  session_id,
+  `timestamp`,
+  CONCAT(
+    'policyId: ', IF(search_results[1].`policyId` IS NOT NULL, search_results[1].`policyId`, 'UNKNOWN'), '; ',
+    'title: ', IF(search_results[1].`title` IS NOT NULL, search_results[1].`title`, 'No Title'), '; ',
+    'region: ', IF(search_results[1].`region` IS NOT NULL, search_results[1].`region`, 'Unspecified'), '; ',
+    'category: ', IF(search_results[1].`category` IS NOT NULL, search_results[1].`category`, 'General'), '; ',
+    'lastUpdated: ', IF(search_results[1].`lastUpdated` IS NOT NULL, CAST(search_results[1].`lastUpdated` AS STRING), '1970-01-01'), '; ',
+    'content: ', IF(search_results[1].`content` IS NOT NULL, search_results[1].`content`, 'No content available.')
+  ) AS search_result_summary
+FROM search_embeddings,
+  LATERAL TABLE(
+    VECTOR_SEARCH(mongodb, 1, DESCRIPTOR(contentEmbedding), search_embeddings.query_embedding)
+  ) AS T(search_results);
 ```
 
 ## Task 5: Integrate Scheduler Agent with Lambda Sink Connector
@@ -491,27 +554,54 @@ Step-by-step Setup:
 3. Fill in the relevant configuration details below and deploy the connector.
 ```json
 {
-  "name": "scheduler-agent-input",
   "config": {
-    "connector.class": "io.confluent.connect.http.HttpSinkConnector",
     "topics": "scheduler_agent_input",
+    "schema.context.name": "default",
+    "input.data.format": "AVRO",
+    "connector.class": "LambdaSink",
+    "name": "SchedulerAgentSink",
+    "kafka.auth.mode": "KAFKA_API_KEY",
+    "kafka.api.key": "<YOUR_KAFKA_API_KEY>",
+    "kafka.api.secret": "****************************************************************",
+    "authentication.method": "Access Keys",
+    "aws.access.key.id": "********************",
+    "aws.secret.access.key": "****************************************",
+    "aws.lambda.configuration.mode": "single",
+    "aws.lambda.function.name": "scheduler_agent",
+    "aws.lambda.invocation.type": "sync",
+    "aws.lambda.batch.size": "20",
+    "record.converter.class": "JsonKeyValueConverter",
+    "aws.lambda.socket.timeout": "50000",
+    "behavior.on.error": "log",
+    "max.poll.interval.ms": "300000",
+    "max.poll.records": "500",
     "tasks.max": "1",
-    "http.api.url": "<YOUR_SQL_LAMBDA_ENDPOINT>",
-    "reporter.bootstrap.servers": "<BOOTSTRAP_SERVERS>",
-    "confluent.topic.bootstrap.servers": "<BOOTSTRAP_SERVERS>",
-    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
-    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
-    "value.converter.schemas.enable": false,
-    "header.converter": "org.apache.kafka.connect.storage.SimpleHeaderConverter",
-    "errors.tolerance": "all",
-    "errors.log.enable": "true",
-    "errors.deadletterqueue.topic.name": "sql_agent_dlq",
-    "errors.deadletterqueue.context.headers.enable": "true"
+    "auto.restart.on.user.error": "true",
+    "value.converter.decimal.format": "BASE64",
+    "value.converter.reference.subject.name.strategy": "DefaultReferenceSubjectNameStrategy",
+    "value.converter.value.subject.name.strategy": "TopicNameStrategy",
+    "key.converter.key.subject.name.strategy": "TopicNameStrategy"
   }
 }
 ```
+## Task 06 (Optional) – Integrating Email service with Scheduler agent using AWS SNS
+You can send email notifications to about the meeting from the scheduler agent using AWS SNS service. The Scheduler agent pushes events to the SNS service. You can create an E-mail subscription out of the SNS topic using your email address to receive email notification.
 
-## Task 06 – Final Agent Builder Join & response input Structuring
+You need to create an email subscription on AWS SNS
+
+  - Go to AWS SNS --> Click Subscription. 
+  - Fill in the details like the SNS topic arn, 
+      - Set Protocol = <b>Email</b>
+      - Type in your email address
+  
+  <p><img src="assets/img/sns_subscription.png" alt="sign-up" /></p>
+
+Create a subscription and verify your email address via an email sent by SNS service.
+
+Once the email is verified you'll receive emails about the new events when a scheduler agent creates one.
+
+
+## Task 07 – Final Agent Builder Join & response input Structuring
 Now that all three agents (SQL, Search, Scheduler) have emitted results, we perform a final conditional join with the orchestrator metadata. This gives us a fully enriched context for each user query.
 
 🔹 Step 1: Join All Agent Results
@@ -545,7 +635,7 @@ SELECT
   CASE 
         WHEN o.sql_agent = 'true' 
          AND s.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '5' MINUTE 
-        THEN s.sql_result 
+        THEN s.sql_agent_response 
         ELSE NULL 
       END AS employee_info,
   CASE 
@@ -555,7 +645,7 @@ SELECT
         ELSE NULL 
       END AS additional_context
   -- Add scheduler result fields if needed
-FROM orchestrator_metadata o , sql_result s ,context_results c ,scheduler_agent_response sch
+FROM orchestrator_metadata o , sql_agent_response s ,context_results c ,scheduler_agent_response sch
   where o.message_id = s.message_id
   AND o.sql_agent = 'true'
   AND s.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '5' MINUTE
@@ -597,7 +687,7 @@ Explanation:
 - This filters out older or duplicate outputs and prepares a clean stream for the final response.
 
 
-## Task 07 – Final Response Generation (Natural Language)
+## Task 08 – Final Response Generation (Natural Language)
 Once all agent responses are joined and filtered into a clean stream (final_response_builder), we use a Bedrock LLM to formulate a natural language answer. This is the final response a user would see in Slack, email, or a chatbot.
 
 🔹 Step 1: Define Prompt Template for Bedrock
