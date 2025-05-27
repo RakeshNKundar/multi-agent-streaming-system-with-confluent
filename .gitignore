@@ -14,3 +14,8 @@ trial*
 .env.production.local
 .terraform*
 terraform.tfstate*
+sql_agent_lambda.zip
+scheduler_agent_lambda.zip
+env/
+scheduler-lambda.zip
+queries/

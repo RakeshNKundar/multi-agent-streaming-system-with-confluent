@@ -1,0 +1,139 @@
+provider "aws" {
+  region = "us-east-1"
+}
+
+
+resource "aws_s3_bucket" "lambda_layers" {
+  bucket        = "my-lambda-layers-${random_id.suffix.hex}"
+  force_destroy = true
+}
+
+resource "aws_s3_object" "sql_agent_layer_zip" {
+  bucket = aws_s3_bucket.lambda_layers.bucket
+  key    = "layers/sql_agent_layer.zip"
+  source = "../agents/sql_agent/artifacts/sql_agent_layer.zip"
+  etag   = filemd5("../agents/sql_agent/artifacts/sql_agent_layer.zip")
+}
+
+resource "aws_s3_object" "scheduler_agent_layer_zip" {
+  bucket = aws_s3_bucket.lambda_layers.bucket
+  key    = "layers/scheduler_agent_layer.zip"
+  source = "../agents/scheduler_agent/artifacts/scheduler-lambda-layer.zip"
+  etag   = filemd5("../agents/scheduler_agent/artifacts/scheduler-lambda-layer.zip")
+}
+
+resource "random_id" "suffix" {
+  byte_length = 4
+}
+
+resource "aws_iam_role" "lambda_exec_role" {
+  name = "lambda_exec_role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+    }]
+  })
+}
+
+resource "aws_lambda_layer_version" "sql_agent_layer" {
+  layer_name          = "sql_agent_layer"
+  compatible_runtimes = ["python3.12"]
+  s3_bucket           = aws_s3_bucket.lambda_layers.bucket
+  s3_key              = aws_s3_object.sql_agent_layer_zip.key
+  description         = "sql_agent_layer 1"
+}
+
+resource "aws_lambda_layer_version" "scheduler_agent_layer" {
+  layer_name          = "scheduler_agent_layer"
+  compatible_runtimes = ["python3.12"]
+  s3_bucket           = aws_s3_bucket.lambda_layers.bucket
+  s3_key              = aws_s3_object.scheduler_agent_layer_zip.key
+  description         = "scheduler_agent_layer 1"
+}
+
+
+resource "aws_iam_role_policy_attachment" "lambda_logs" {
+  role       = aws_iam_role.lambda_exec_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy_attachment" "bedrock_access" {
+  role       = aws_iam_role.lambda_exec_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonBedrockFullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "sns_access" {
+  role       = aws_iam_role.lambda_exec_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSNSFullAccess"
+}
+
+data "archive_file" "sql_agent_lambda" {
+  type        = "zip"
+  source_dir  = "../agents/sql_agent/source_code/"
+  output_path = "../agents/sql_agent/artifacts/sql_agent_lambda.zip"
+}
+
+
+data "archive_file" "scheduler_agent_lambda" {
+  type        = "zip"
+  source_dir  = "../agents/scheduler_agent/source-code/"
+  output_path = "../agents/scheduler_agent/artifacts/scheduler_agent_lambda.zip"
+}
+
+resource "aws_lambda_function" "sql_agent" {
+  function_name    = "sql_agent"
+  role             = aws_iam_role.lambda_exec_role.arn
+  handler          = "lambda_function.lambda_handler"
+  runtime          = "python3.12"
+  filename         = data.archive_file.sql_agent_lambda.output_path
+  source_code_hash = filebase64sha256(data.archive_file.sql_agent_lambda.output_path)
+  layers           = [aws_lambda_layer_version.sql_agent_layer.arn]
+  environment {
+    variables = {
+      BOOTSTRAP_ENDPOINT         = confluent_kafka_cluster.default.bootstrap_endpoint
+      KAFKA_API_KEY              = confluent_api_key.cluster-api-key.id
+      KAFKA_API_SECRET           = confluent_api_key.cluster-api-key.secret
+      SCHEMA_REGISTRY_API_KEY    = confluent_api_key.schema-registry-api-key.id
+      SCHEMA_REGISTRY_API_SECRET = confluent_api_key.schema-registry-api-key.secret
+      SCHEMA_REGISTRY_ENDPOINT   = confluent_schema_registry_cluster.default.rest_endpoint
+      sql_agent_result_topic     = "<Enter_sql_agent_result_topic_name>"
+    }
+  }
+}
+
+resource "aws_cloudwatch_log_group" "lambda_log_group_sql_agent" {
+  name              = "/aws/lambda/${aws_lambda_function.sql_agent.function_name}"
+  retention_in_days = 14
+}
+
+resource "aws_lambda_function" "scheduler_agent" {
+  function_name    = "scheduler_agent"
+  role             = aws_iam_role.lambda_exec_role.arn
+  handler          = "lambda_function.lambda_handler"
+  runtime          = "python3.12"
+  filename         = data.archive_file.scheduler_agent_lambda.output_path
+  source_code_hash = filebase64sha256(data.archive_file.scheduler_agent_lambda.output_path)
+  layers           = [aws_lambda_layer_version.scheduler_agent_layer.arn]
+  environment {
+    variables = {
+      BOOTSTRAP_ENDPOINT           = confluent_kafka_cluster.default.bootstrap_endpoint
+      KAFKA_API_KEY                = confluent_api_key.cluster-api-key.id
+      KAFKA_API_SECRET             = confluent_api_key.cluster-api-key.secret
+      SCHEMA_REGISTRY_API_KEY      = confluent_api_key.schema-registry-api-key.id
+      SCHEMA_REGISTRY_API_SECRET   = confluent_api_key.schema-registry-api-key.secret
+      SCHEMA_REGISTRY_ENDPOINT     = confluent_schema_registry_cluster.default.rest_endpoint
+      scheduler_agent_result_topic = "<Enter_scheduler_agent_result_topic_name>"
+    }
+  }
+}
+
+resource "aws_cloudwatch_log_group" "lambda_log_group_scheduler_agent" {
+  name              = "/aws/lambda/${aws_lambda_function.scheduler_agent.function_name}"
+  retention_in_days = 14
+}
