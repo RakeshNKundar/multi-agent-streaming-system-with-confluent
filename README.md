@@ -634,35 +634,40 @@ SELECT
   o.message,
   CASE 
         WHEN o.sql_agent = 'true' 
-         AND s.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '5' MINUTE 
-        THEN s.sql_agent_response 
+         AND s.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '5' HOUR 
+        THEN s.sql_result 
         ELSE NULL 
       END AS employee_info,
   CASE 
         WHEN o.search_agent = 'true' 
-         AND c.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '5' MINUTE 
-        THEN c.search_results 
+         AND c.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '5' HOUR 
+        THEN c.`search_result_summary` 
         ELSE NULL 
-      END AS additional_context
+      END AS additional_context,
+  CASE 
+        WHEN o.scheduler_agent = 'true' 
+         AND sch.`$rowtime` BETWEEN sch.`$rowtime` - INTERVAL '5' MINUTE AND sch.`$rowtime` + INTERVAL '5' HOUR 
+        THEN sch.`title`
+        ELSE NULL 
+      END AS meeting_title
   -- Add scheduler result fields if needed
 FROM orchestrator_metadata o , sql_agent_response s ,context_results c ,scheduler_agent_response sch
   where o.message_id = s.message_id
   AND o.sql_agent = 'true'
-  AND s.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '5' MINUTE
+  AND s.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '5' HOUR
   OR ( o.message_id = c.message_id
   AND o.search_agent = 'true'
-  AND c.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '5' MINUTE )
+  AND c.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '5' HOUR )
   OR ( o.message_id = sch.message_id
   AND o.scheduler_agent = 'true'
-  AND sch.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '5' MINUTE) ;
-
-```
+  AND sch.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '5' HOUR) ;
+  ```
 🔹 Step 2: Filter Latest Version per Message
 
 Now that agent data is joined with metadata, we only want the most recent version per message ID, so we don’t emit multiple rows per 10-second interval.
 ```sql
 CREATE TABLE final_response_builder AS 
-SELECT message_id, employee_info, additional_context
+SELECT sql_agent,sql_agent_query,search_agent,search_agent_query,scheduler_agent,scheduler_title,scheduler_description,execution_sequence,event_time,message_id,user_email,session_id,employee_id,message,employee_info,additional_context
 FROM (
     SELECT *,
            ROW_NUMBER() OVER (
@@ -670,7 +675,7 @@ FROM (
                ORDER BY event_time DESC
            ) AS row_num
     FROM TABLE(
-        TUMBLE(TABLE final_enriched_output_with_inner_joinv2, 
+        TUMBLE(TABLE enriched_query_with_agent_responses,
                DESCRIPTOR(event_time), 
                INTERVAL '10' SECOND)
     )
@@ -702,33 +707,30 @@ We'll send a structured prompt to the LLM, containing:
 CREATE TABLE user_friendly_agent_response
 WITH ('changelog.mode' = 'append') AS
 SELECT 
-  message_id,
+  message_id,user_email,session_id,employee_id,message,`response` as final_response_text FROM final_response_builder,
+LATERAL TABLE(
   ML_PREDICT(
-    'BedrockFinalFormatter',
+    'BedrockGeneralModel',
     'You are a helpful workplace assistant. Summarize the structured agent responses below into a natural and helpful reply to the user.' || '\n\n' ||
 
     '---' || '\n' ||
     'Original message: ' || message || '\n\n' ||
 
     'SQL Agent Triggered: ' || sql_agent || '\n' ||
-    'Query: ' || sql_agent_query || '\n' ||
-    'Employee/Department Level Info Result obtained from SQL agent: ' || employee_info || '\n\n' ||
+    'Employee/Department Level Info Result obtained from SQL agent: ' ||  IFNULL(employee_info, 'none') || '\n\n' ||
 
     'Search Agent Triggered: ' || search_agent || '\n' ||
-    'Search Query: ' || search_agent_query || '\n' ||
-    'Search Result: ' || additional_context || '\n\n' ||
+    'Search Result: ' || IFNULL(additional_context, 'none') || '\n\n' ||
 
     'Scheduler Agent Triggered: ' || scheduler_agent || '\n' ||
-    'Meeting Title: ' || scheduler_title || '\n' ||
-    'Description: ' || scheduler_description || '\n' ||
-    'Time: ' || scheduler_start || ' to ' || scheduler_end || '\n' ||
-    'Attendees: ' || scheduler_attendees || '\n\n' ||
+    'Meeting Title: ' ||  IFNULL(scheduler_title, 'none') || '\n' ||
+    'Description: ' ||  IFNULL(scheduler_description, 'none') || '\n' ||
 
-    'Execution Sequence: ' || execution_sequence || '\n\n' ||
+    'Execution Sequence: ' || IFNULL(execution_sequence, 'none') || '\n\n' ||
 
     'Generate a complete, professional answer below:\n'
-  ) AS final_response_text
-FROM enriched_query_with_agent_responses;
+  )
+ );
 ```
 
 ✅ Example Output
