@@ -152,3 +152,39 @@ resource "aws_cloudwatch_log_group" "lambda_log_group_scheduler_agent" {
   name              = "/aws/lambda/${aws_lambda_function.scheduler_agent.function_name}"
   retention_in_days = 14
 }
+
+resource "aws_lambda_function" "search_agent" {
+  function_name = "search_agent"
+  role          = aws_iam_role.lambda_exec_role.arn
+  handler       = "lambda_function.lambda_handler"
+  runtime       = "python3.13"
+  filename      = data.archive_file.scheduler_agent_lambda.output_path
+  timeout       = 900
+  memory_size   = 10240
+  ephemeral_storage {
+    size = 10240
+  }
+  source_code_hash = filebase64sha256(data.archive_file.scheduler_agent_lambda.output_path)
+  layers           = [aws_lambda_layer_version.scheduler_agent_layer.arn]
+  environment {
+    variables = {
+      MONGO_USER                 = mongodbatlas_database_user.default.username
+      MONGO_PASSWORD             = mongodbatlas_database_user.default.password
+      DB_NAME                    = "workplace_knowledgebase"
+      COLLECTION_NAME            = "knowledge_collection"
+      BOOTSTRAP_ENDPOINT         = confluent_kafka_cluster.default.bootstrap_endpoint
+      KAFKA_API_KEY              = confluent_api_key.cluster-api-key.id
+      KAFKA_API_SECRET           = confluent_api_key.cluster-api-key.secret
+      SCHEMA_REGISTRY_API_KEY    = confluent_api_key.schema-registry-api-key.id
+      SCHEMA_REGISTRY_API_SECRET = confluent_api_key.schema-registry-api-key.secret
+      SCHEMA_REGISTRY_ENDPOINT   = confluent_schema_registry_cluster.default.rest_endpoint
+      search_agent_result_topic  = "<Enter_search_agent_result_topic_name>"
+      SNS_ARN                    = aws_sns_topic.gameday_sns_topic.arn
+    }
+  }
+}
+
+resource "aws_cloudwatch_log_group" "lambda_log_group_scheduler_agent" {
+  name              = "/aws/lambda/${aws_lambda_function.scheduler_agent.function_name}"
+  retention_in_days = 14
+}
