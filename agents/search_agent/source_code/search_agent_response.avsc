@@ -1,0 +1,50 @@
+{
+  "fields": [
+    {
+      "default": null,
+      "name": "query",
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    {
+      "name": "message_id",
+      "type": "string"
+    },
+    {
+      "name": "employee_id",
+      "type": "string"
+    },
+    {
+      "name": "user_email",
+      "type": "string"
+    },
+    {
+      "name": "message",
+      "type": "string"
+    },
+    {
+      "name": "session_id",
+      "type": "string"
+    },
+    {
+      "name": "timestamp",
+      "type": {
+        "logicalType": "timestamp-millis",
+        "type": "long"
+      }
+    },
+    {
+      "default": null,
+      "name": "search_result_summary",
+      "type": [
+        "null",
+        "string"
+      ]
+    }
+  ],
+  "name": "context_results_value",
+  "namespace": "org.apache.flink.avro.generated.record",
+  "type": "record"
+}

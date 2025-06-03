@@ -61,7 +61,7 @@ def build_summary_from_doc(doc):
 
 def produce_context_result(search_result_summary, query, message, message_id, employee_id, user_email, session_id):
     topic = os.getenv("search_agent_result_topic")
-    schema_file = "context_results_value.avsc"
+    schema_file = "search_agent_response.avsc"
 
     # Load Avro schema
     schema_path = os.path.join(os.path.dirname(__file__), schema_file)

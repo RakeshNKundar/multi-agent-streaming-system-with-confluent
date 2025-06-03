@@ -16,6 +16,7 @@ trial*
 terraform.tfstate*
 sql_agent_lambda.zip
 scheduler_agent_lambda.zip
+search_agent_lambda.zip
 env/
 scheduler-lambda.zip
 queries/

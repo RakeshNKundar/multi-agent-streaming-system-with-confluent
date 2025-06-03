@@ -272,7 +272,7 @@ Each agent is an independent component in the system. Here's a quick breakdown:
 🔎 Vector Search Agent: Uses semantic embeddings to retrieve contextually relevant documents from a MongoDB Vector Store.
 📅 Scheduler Agent: Automates meeting scheduling using structured metadata like title, time, and attendees.
 
-These agents listen on their respective Kafka input topics and output results to their own response topics (e.g., sql_agent_response, context_result, scheduler_result).
+These agents listen on their respective Kafka input topics and output results to their own response topics (e.g., sql_agent_response, search_agent_response, scheduler_result).
 
 So we now create three router queries which routes the message to it's repective agent inputs. 
 
@@ -635,7 +635,7 @@ SELECT
         ELSE NULL 
       END AS meeting_title
   -- Add scheduler result fields if needed
-FROM orchestrator_metadata o , sql_agent_response s ,context_results c ,scheduler_agent_response sch
+FROM orchestrator_metadata o , sql_agent_response s ,search_agent_response c ,scheduler_agent_response sch
   where o.message_id = s.message_id
   AND o.sql_agent = 'true'
   AND s.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '5' HOUR
