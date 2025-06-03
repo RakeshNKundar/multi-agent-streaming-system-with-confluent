@@ -121,144 +121,143 @@ chmod +x ./setup/init.sh
 ./setup/init.sh
 ```
 
-## Task 01 – Orchestrator Agent (LLM-based Decision Making)
+## Task 1 – Orchestrator Agent (LLM-based Decision Making)
 
 
-1. Login to your confluent cloud account to see the different resources deployed on your environment.Make a not of your environment id.
+1. Login to your confluent cloud account to see the different resources deployed on your environment.
 
-2. In a different terminal, run:
-Login to confluent cloud
-```bash
-confluent login --save 
-```
-Select the environment id for the environment created on your account.
-```bash
-confluent env use --<YOUR_ENVIRONMENT_ID>
-```
-Create a FlinkSQL connection to connect to bedrock claude text model.Please replace your access keys and secrets & <env-id> before running the command.
-```bash
-confluent flink connection create bedrock-text-connection \
-  --cloud AWS \
-  --region us-east-1 \
-  --environment <env-id> \
-  --type bedrock \
-  --endpoint https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-sonnet-20240229-v1:0/invoke \
-  --aws-access-key <Replace with your own access key> \
-  --aws-secret-key <Replace with your own access secret >
-```
+1. Navigate to the Environment labeled `confluent_agentic_workshop`
 
-3. Log in to your confluent cloud env and access flink workspace(UI tool to run your flinksql queries) to run following queries:
+1. Once in the Environment view, click the Integrations tab and create a new Connection. ![Creating a connection to Amazon Bedrock](assets/img/integration.png)
 
-```sql
-CREATE MODEL BedrockGeneralModel INPUT (text STRING) OUTPUT (response STRING) COMMENT 'General model with no system prompt.'
-WITH
-    (
-        'task' = 'text_generation',
-        'provider' = 'bedrock',
-        'bedrock.PARAMS.max_tokens' = '200000',
-        'bedrock.PARAMS.temperature' = '0.1',
-        'bedrock.connection' = 'bedrock-text-connection'
-    );
+1. Select Amazon Bedrock as the service with which to create a connection. ![alt text](assets/img/service_select.png)
 
-```
-Replace <message_field> value before running the command.
+1. Fill out the form using following:
+    - Endpoint: `https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-sonnet-20240229-v1:0/invoke`
+    - aws-access-key - <Replace_with_your_own_access_key> 
+    - aws-secret-key  - <Replace_with_your_own_access_key>
 
-```sql
-CREATE TABLE `orchestrator_metadata` AS 
-SELECT 
-    JSON_VALUE(response, '$.sql_agent') AS sql_agent,
-    JSON_VALUE(response, '$.sql_agent_metadata.query') AS sql_agent_query,
-    JSON_VALUE(response, '$.sql_agent_metadata.user_email') AS sql_agent_user_email,
-    JSON_VALUE(response, '$.sql_agent_metadata.employee_id') AS sql_agent_employee_id,
+1. Give your connection name of `bedrock-text-connection` and launch the connection. 
+![alt text](assets/img/name_integration.png)
 
-    JSON_VALUE(response, '$.search_agent') AS search_agent,
-    JSON_VALUE(response, '$.search_agent_metadata.query') AS search_agent_query,
 
-    JSON_VALUE(response, '$.scheduler_agent') AS scheduler_agent,
-    JSON_VALUE(response, '$.scheduler_agent_metadata.title') AS scheduler_title,
-    JSON_VALUE(response, '$.scheduler_agent_metadata.description') AS scheduler_description,
-    JSON_VALUE(response, '$.scheduler_agent_metadata.location') AS scheduler_location,
-    JSON_VALUE(response, '$.scheduler_agent_metadata.start') AS scheduler_start,
-    JSON_VALUE(response, '$.scheduler_agent_metadata.end') AS scheduler_end,
-    JSON_QUERY(response, '$.scheduler_agent_metadata.attendees') AS scheduler_attendees,
-    JSON_QUERY(response, '$.sequence') AS execution_sequence,`timestamp`,
-message_id,user_email,session_id,employee_id,message
-FROM 
-    queries ,
-LATERAL TABLE(
-    ML_PREDICT(
-        'BedrockGeneralModel',(
-            'You are a query router for a multi-agent workplace assistant.
+1. Next, navigate to Flink with Confluent Cloud and open your SQL workspace. ![alt text](assets/img/flink_nav.png)
 
-Given the user input, extract:
+1. Run following queries within the SQL workspace you've opened up:
 
-1. Which agents are required
-2. A relevant fragment of the query for each agent — do not copy the full query unless necessary
-3. Agent-specific metadata in structured JSON
-4. An execution sequence, if applicable.
+    ```sql
+    CREATE MODEL BedrockGeneralModel INPUT (text STRING) OUTPUT (response STRING) COMMENT 'General model with no system prompt.'
+    WITH
+        (
+            'task' = 'text_generation',
+            'provider' = 'bedrock',
+            'bedrock.PARAMS.max_tokens' = '200000',
+            'bedrock.PARAMS.temperature' = '0.1',
+            'bedrock.connection' = 'bedrock-text-connection'
+        );
 
-Descriptions of agents:
+    ```
 
-* sql\_agent: Handles employee- or department-level data queries from SQL using employee\_id or user\_email.
-* search\_agent: Retrieves top documents or policies using vector search based on semantic meaning.
-* scheduler\_agent: Schedules meetings or creates events using provided attendees, title, and time.
 
-Return the result in strict JSON using this structure:
+    ```sql
+    CREATE TABLE `orchestrator_metadata` AS 
+    SELECT 
+        JSON_VALUE(response, '$.sql_agent') AS sql_agent,
+        JSON_VALUE(response, '$.sql_agent_metadata.query') AS sql_agent_query,
+        JSON_VALUE(response, '$.sql_agent_metadata.user_email') AS sql_agent_user_email,
+        JSON_VALUE(response, '$.sql_agent_metadata.employee_id') AS sql_agent_employee_id,
 
-{
-  "sql_agent": true | false,
-  "sql_agent_metadata": {
-    "query": "<original message from user>",
-    "user_email": "<original user_email>",
-    "employee_id": "<original employee_id>"
-  },
+        JSON_VALUE(response, '$.search_agent') AS search_agent,
+        JSON_VALUE(response, '$.search_agent_metadata.query') AS search_agent_query,
 
-  "search_agent": true | false,
-  "search_agent_metadata": {
-    "query": "<original message from user>"
-  },
+        JSON_VALUE(response, '$.scheduler_agent') AS scheduler_agent,
+        JSON_VALUE(response, '$.scheduler_agent_metadata.title') AS scheduler_title,
+        JSON_VALUE(response, '$.scheduler_agent_metadata.description') AS scheduler_description,
+        JSON_VALUE(response, '$.scheduler_agent_metadata.location') AS scheduler_location,
+        JSON_VALUE(response, '$.scheduler_agent_metadata.start') AS scheduler_start,
+        JSON_VALUE(response, '$.scheduler_agent_metadata.end') AS scheduler_end,
+        JSON_QUERY(response, '$.scheduler_agent_metadata.attendees') AS scheduler_attendees,
+        JSON_QUERY(response, '$.sequence') AS execution_sequence,`timestamp`,
+    message_id,user_email,session_id,employee_id,message
+    FROM 
+        queries ,
+    LATERAL TABLE(
+        ML_PREDICT(
+            'BedrockGeneralModel',(
+                'You are a query router for a multi-agent workplace assistant.
 
-  "scheduler_agent": true | false,
-  "scheduler_agent_metadata": {
-    "title": "Meeting Title",
-    "description": "Purpose of the meeting",
-    "location": "Virtual",
-    "start": "2025-05-06T15:00:00Z",
-    "end": "2025-05-06T16:00:00Z",
-    "attendees": ["<user_email or mentioned email>"]
-  },
+    Given the user input, extract:
 
-  "sequence": ["scheduler_agent", "search_agent", "sql_agent"]
-}
+    1. Which agents are required
+    2. A relevant fragment of the query for each agent — do not copy the full query unless necessary
+    3. Agent-specific metadata in structured JSON
+    4. An execution sequence, if applicable.
 
-  
-' || '\n User prompt: ' ||
-            '{
-   message_id: ' || message_id || ','
-  'employee_id: '||  employee_id || ','
-  'user_email:' || user_email || ','
-  'message:'|| <message_field> || '}'
+    Descriptions of agents:
+
+    * sql\_agent: Handles employee- or department-level data queries from SQL using employee\_id or user\_email.
+    * search\_agent: Retrieves top documents or policies using vector search based on semantic meaning.
+    * scheduler\_agent: Schedules meetings or creates events using provided attendees, title, and time.
+
+    Return the result in strict JSON using this structure:
+
+    {
+      "sql_agent": true | false,
+      "sql_agent_metadata": {
+        "query": "<original message from user>",
+        "user_email": "<original user_email>",
+        "employee_id": "<original employee_id>"
+      },
+
+      "search_agent": true | false,
+      "search_agent_metadata": {
+        "query": "<original message from user>"
+      },
+
+      "scheduler_agent": true | false,
+      "scheduler_agent_metadata": {
+        "title": "Meeting Title",
+        "description": "Purpose of the meeting",
+        "location": "Virtual",
+        "start": "2025-05-06T15:00:00Z",
+        "end": "2025-05-06T16:00:00Z",
+        "attendees": ["<user_email or mentioned email>"]
+      },
+
+      "sequence": ["scheduler_agent", "search_agent", "sql_agent"]
+    }
+
+      
+    ' || '\n User prompt: ' ||
+                '{
+      message_id: ' || message_id || ','
+      'employee_id: '||  employee_id || ','
+      'user_email:' || user_email || ','
+      'message:'|| message_id || '}'
+            )
         )
-    )
-);
-```
+    );
+    ```
 
-5. Insert a sample query in the `queries` topic to test out our flink agent. 
+1. Navigate to the Topics tab and find the `queries` topic. ![alt text](assets/img/queries_topic.png)
 
-```json
-{
-  "message_id": "d7a97c0a-8e5b-4c65-90cb-7ea5934ae6d4",
-  "employee_id": "E001",
-  "user_email": "john.smith@company.com",
-  "session_id": "sess-01",
-  "message": "What is company's maternal leave policy? How much am I eligible for ?",
-  "timestamp": 1746717000000
-}
-```
+1. Insert a sample query in the `queries` topic to test out our flink agent. 
 
-5. Verify the data in the respective topics - **queries** and **orchestrator_metadata**. 
+    ```json
+    {
+      "message_id": "d7a97c0a-8e5b-4c65-90cb-7ea5934ae6d4",
+      "employee_id": "E001",
+      "user_email": "john.smith@company.com",
+      "session_id": "sess-01",
+      "message": "What is company's maternal leave policy? How much am I eligible for ?",
+      "timestamp": 1746717000000
+    }
+    ```
+    ![alt text](assets/img/produce.png)
 
-6. Take a look at the agent flags and observe which are true for the input we have given.
+5. Verify the data exists in the respective topics - **queries** and **orchestrator_metadata**. 
+
+6. Click the record in the `orchestrator_metadata` topic to view the field values. Take a look at the agent flags and observe which are true for the input we have given. ![alt text](assets/img/message_check.png)
 
 7. Try It Yourself ✏️:
     1. How would you change the prompt to include the SQL agent for being called?
