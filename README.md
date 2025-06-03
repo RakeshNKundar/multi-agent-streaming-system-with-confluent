@@ -81,8 +81,8 @@ This architecture includes:
 git clone https://github.com/RakeshNKundar/multi-agent-streaming-system-with-confluent.git
 ```
 
-2. ### Create a Cloud API Key
-Create cloud api key for your confluent cloud account with resource scope as Cloud resource management.
+2. ### Create a Confluent Cloud API Key
+Create Confluent Cloud API Key for your confluent cloud account with resource scope as Cloud resource management.
 - Go to https://confluent.cloud/settings/api-keys 
 - Add API Key 
 - Cloud resource management 
@@ -458,18 +458,6 @@ confluent flink connection create bedrock-embedding-connection \
 ```
 
 
-2. Create a FlinkSQL connection to connect to MongoDB .Please replace your own endpoint , username and passowrd before running the command.
-```bash
-confluent flink connection create mongodb-vector-search-connection \
-  --cloud AWS \
-  --region us-east-1 \
-  --type mongodb \
-  --endpoint ${atlas_endpoint} \
-  --username ${atlas_username} \
-  --password ${atlas_password} \
-  --environment ${ENV_ID}
-```
-
 Log in to your confluent cloud env and access flink workspace(UI tool to run your flinksql queries) to run following queries:
 
 2. Create Bedrock Model in Flink SQL
@@ -497,50 +485,46 @@ LATERAL TABLE(
     )
 );
 ```
-4. Connect to MongoDB Atlas Vector Store
-```sql
-CREATE TABLE mongodb (
-  policyId STRING,
-  title STRING,
-  region STRING,
-  category STRING,
-  lastUpdated STRING, 
-  content STRING , 
- contentEmbedding ARRAY<FLOAT>
-) WITH (
-  'connector' = 'mongodb',
-  'mongodb.connection' = 'mongodb-vector-search-connection',
-  'mongodb.database' = '<knowledge_base>',
-  'mongodb.collection' = '<collection_name>',
-  'mongodb.index' = '<index_name>',
-  'mongodb.embedding_column' = 'contentEmbedding',
-  'mongodb.numCandidates' = '1'
-);
-```
-5. Perform Vector Search to Retrieve Results
-```sql
-CREATE TABLE context_results AS
-SELECT
-  query,
-  message_id,
-  employee_id,
-  user_email,
-  message,
-  session_id,
-  `timestamp`,
-  CONCAT(
-    'policyId: ', IF(search_results[1].`policyId` IS NOT NULL, search_results[1].`policyId`, 'UNKNOWN'), '; ',
-    'title: ', IF(search_results[1].`title` IS NOT NULL, search_results[1].`title`, 'No Title'), '; ',
-    'region: ', IF(search_results[1].`region` IS NOT NULL, search_results[1].`region`, 'Unspecified'), '; ',
-    'category: ', IF(search_results[1].`category` IS NOT NULL, search_results[1].`category`, 'General'), '; ',
-    'lastUpdated: ', IF(search_results[1].`lastUpdated` IS NOT NULL, CAST(search_results[1].`lastUpdated` AS STRING), '1970-01-01'), '; ',
-    'content: ', IF(search_results[1].`content` IS NOT NULL, search_results[1].`content`, 'No content available.')
-  ) AS search_result_summary
-FROM search_embeddings,
-  LATERAL TABLE(
-    VECTOR_SEARCH(mongodb, 1, DESCRIPTOR(contentEmbedding), search_embeddings.query_embedding)
-  ) AS T(search_results);
-```
+4. This task helps you build a fully managed Lambda Kafka Sink Connector that routes your queries to a Search lambda agent , similar to how we did it for a sql agent.
+Goal: Stream search_embeddings Kafka topic data directly to your AWS Lambda.
+Step-by-step Setup:
+  1. Go to Confluent Cloud > Connectors.
+
+  2. Select AWS Lambda Sink Connector from the available connectors.
+
+  3. Fill in the relevant configuration details below and deploy the connector.
+  ```json
+  {
+  "config": {
+    "topics": "search_embeddings",
+    "schema.context.name": "default",
+    "input.data.format": "AVRO",
+    "connector.class": "LambdaSink",
+    "name": "SearchAgent_Sink",
+    "kafka.auth.mode": "KAFKA_API_KEY",
+    "kafka.api.key": "<YOUR_KAFKA_API_KEY>",
+    "kafka.api.secret": "****************************************************************",
+    "authentication.method": "Access Keys",
+    "aws.access.key.id": "********************",
+    "aws.secret.access.key": "****************************************",
+    "aws.lambda.configuration.mode": "single",
+    "aws.lambda.function.name": "search_agent",
+    "aws.lambda.invocation.type": "sync",
+    "aws.lambda.batch.size": "20",
+    "record.converter.class": "JsonKeyValueConverter",
+    "aws.lambda.socket.timeout": "50000",
+    "behavior.on.error": "log",
+    "max.poll.interval.ms": "300000",
+    "max.poll.records": "500",
+    "tasks.max": "1",
+    "auto.restart.on.user.error": "true",
+    "value.converter.decimal.format": "BASE64",
+    "value.converter.reference.subject.name.strategy": "DefaultReferenceSubjectNameStrategy",
+    "value.converter.value.subject.name.strategy": "TopicNameStrategy",
+    "key.converter.key.subject.name.strategy": "TopicNameStrategy"
+  }
+  }
+  ``` 
 
 ## Task 5: Integrate Scheduler Agent with Lambda Sink Connector
 This task helps you build a fully managed Lambda Kafka Sink Connector that routes your queries to a Scheduler lambda agent , similar to how we did it for a sql agent.
@@ -740,4 +724,18 @@ If a user asked:
 And all agents responded, the final result might be:
 
 "I've scheduled a 30-minute meeting titled 'Project Discussion' with Alice at 3 PM tomorrow. Her department's performance for last month shows a 12% increase in output. I've also attached a document detailing her recent projects."
+
+## End of Workshop.
+
+# If you don't need your infrastructure anymore, do not forget to delete the resources!
+- Log in to Confluent Cloud.
+
+- Click on your organization name in the top left corner.
+
+- Select the "Environments" tab.
+
+- Click on the environment ,click `delete environment` button on the right side.
+
+- Choose "Delete".
+![Delete Resources Diagram](assets/img/destroy.png)
 
