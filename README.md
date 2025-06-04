@@ -233,7 +233,7 @@ chmod +x ./setup/init.sh
       message_id: ' || message_id || ','
       'employee_id: '||  employee_id || ','
       'user_email:' || user_email || ','
-      'message:'|| message_id || '}'
+      'message:'|| message || '}'
             )
         )
     );
@@ -290,7 +290,7 @@ SELECT
     session_id , 
     `timestamp`
 FROM orchestrator_metadata 
-where <Enter the condition here>; 
+where sql_agent='true'; 
 ```
 
 🔹 Search Agent (Vector)
@@ -308,7 +308,7 @@ SELECT
     session_id , 
     `timestamp`
 FROM orchestrator_metadata 
-where <Enter the condition here>; 
+where search_agent='true';
 ```
 
 🔹 Scheduler Agent
@@ -333,7 +333,7 @@ SELECT
   REGEXP_REPLACE(scheduler_attendees, '\\["|\\"]', ''), '","'
 ) AS attendees
 FROM orchestrator_metadata
-WHERE <Enter the condition here>; 
+WHERE scheduler_agent = 'true';
 ```
 Verify the data in the respective topics - **sql_agent_input**, **search_agent_v2** and **scheduler_agent_input**.If any of these topics are empty, it likely means you haven’t triggered a user query that would activate the corresponding agent.
 
@@ -398,92 +398,69 @@ SCHEMA_REGISTRY_API_SECRET=<your-schema-registry-api-secret>
 SCHEMA_REGISTRY_ENDPOINT=https://<your-schema-registry-endpoint>
 TOPIC_NAME=sql_agent_response
 ```
+Create a Lambda IAM Assume Role Integration
+1. Navigate to the Integrations tab of your environment and click Add Integration. ![alt text](assets/img/assume_role_integration.png)
+1. Select `New role`
+1. Select the `Lambda Sink` option and follow the rest of the integration set up as instructed. When instructed, provide a simple name such as `lambda iam assume role` for the integration.
+![alt text](assets/img/lambda_select.png)
 
-Once your Lambda is ready, proceed to configure the Confluent-managed Kafka Sink Connector to invoke this function on every message received in sql_agent_input.
+
+With your Lambda is ready and your IAM Assume Role Integration created, proceed to configure the Confluent-managed Kafka Sink Connector to invoke this function on every message received in sql_agent_input.
 
 Step-by-step Setup:
 1. Go to Confluent Cloud > Connectors.
 
 2. Select AWS Lambda Sink Connector from the available connectors.
+![alt text](assets/img/connector_select.png)
 
-3. Fill in the relevant configuration details below and deploy the connector.
-```json
-{
-  "config": {
-    "topics": "sql_agent_input",
-    "schema.context.name": "default",
-    "input.data.format": "AVRO",
-    "connector.class": "LambdaSink",
-    "name": "SqlAgentSink",
-    "kafka.auth.mode": "KAFKA_API_KEY",
-    "kafka.api.key": "<YOUR_KAFKA_API_KEY>",
-    "kafka.api.secret": "****************************************************************",
-    "authentication.method": "Access Keys",
-    "aws.access.key.id": "********************",
-    "aws.secret.access.key": "****************************************",
-    "aws.lambda.configuration.mode": "single",
-    "aws.lambda.function.name": "sql_agent",
-    "aws.lambda.invocation.type": "sync",
-    "aws.lambda.batch.size": "20",
-    "record.converter.class": "JsonKeyValueConverter",
-    "aws.lambda.socket.timeout": "50000",
-    "behavior.on.error": "log",
-    "max.poll.interval.ms": "300000",
-    "max.poll.records": "500",
-    "tasks.max": "1",
-    "auto.restart.on.user.error": "true",
-    "value.converter.decimal.format": "BASE64",
-    "value.converter.reference.subject.name.strategy": "DefaultReferenceSubjectNameStrategy",
-    "value.converter.value.subject.name.strategy": "TopicNameStrategy",
-    "key.converter.key.subject.name.strategy": "TopicNameStrategy"
-  }
-}
-```
+3. Select the `sql_agent_input` topic. Each time a record lands in this topic, the Lambda function will get triggered. ![alt text](assets/img/topic_select.png)
 
+1. During the authentication part, be sure you point this connector to the `sql_agent` Lambda function and that you use the `IAM Roles` as the authentication method. The `Provider Integration` you created earlier is what you select last.
+![alt text](assets/img/use_integration.png)
+
+1. Set the Input Kafka record value format to `AVRO`. Leave all other values as default/empty.
+![alt text](assets/img/avro.png)
+
+1. Lastly, provide your connector a name of `sql_agent_connector`
 
 ## Task 4: Context Retrieval via Vector Search 
 We now add intelligence to our Research Agent using Amazon Bedrock embeddings + MongoDB vector search.
 
-1. Create a FlinkSQL connection to connect to bedrock text embedding model.Please replac your own keys before running the command.
-```bash
-confluent flink connection create bedrock-embedding-connection \
-  --cloud AWS \
-  --region 	us-east-1 \
-  --environment <env-id> \
-  --type bedrock \
-  --endpoint https://bedrock-runtime.us-east-1.amazonaws.com/model/amazon.titan-embed-text-v1/invoke \
-  --aws-access-key <Replace with your own access key> \
-  --aws-secret-key <Replace with your own access secret >
-```
+1. Navivigate to the Integrations tab within your environment and create a anothers Connections integration. This time with the endpoint of `https://bedrock-runtime.us-east-1.amazonaws.com/model/amazon.titan-embed-text-v1/invoke`. ![alt text](assets/img/second_integration.png)
 
 
-Log in to your confluent cloud env and access flink workspace(UI tool to run your flinksql queries) to run following queries:
+    The end result should look like this:
+    ![alt text](assets/img/both_integrations.png)
 
-2. Create Bedrock Model in Flink SQL
-```sql
-CREATE MODEL bedrock_embed
-INPUT (text STRING)
-OUTPUT (response ARRAY<FLOAT>)
-WITH (
-  'bedrock.connection'='bedrock-embedding-connection',
-  'bedrock.input_format'='AMAZON-TITAN-EMBED',
-  'provider'='bedrock',
-  'task'='embedding'
-);
-```
+
+
+1. Navigate back to Flink and run the following queries:
+
+    Create Bedrock Model in Flink SQL
+    ```sql
+    CREATE MODEL bedrock_embed
+    INPUT (text STRING)
+    OUTPUT (response ARRAY<FLOAT>)
+    WITH (
+      'bedrock.connection'='bedrock-embedding-connection',
+      'bedrock.input_format'='AMAZON-TITAN-EMBED',
+      'provider'='bedrock',
+      'task'='embedding'
+    );
+    ```
 
 3. Embed User Queries
-```sql
-CREATE TABLE search_embeddings AS 
-SELECT CAST(message_id AS BYTES) as key,`response` as query_embedding, query ,message_id ,employee_id ,user_email,message,session_id ,`timestamp` from `search_agent_input`, 
-LATERAL TABLE(
-    ML_PREDICT(
-        'bedrock_embed',(
-            'queryFromEmployee: ' || query 
+    ```sql
+    CREATE TABLE search_embeddings AS 
+    SELECT CAST(message_id AS BYTES) as key,`response` as query_embedding, query ,message_id ,employee_id ,user_email,message,session_id ,`timestamp` from `search_agent_input`, 
+    LATERAL TABLE(
+        ML_PREDICT(
+            'bedrock_embed',(
+                'queryFromEmployee: ' || query 
+            )
         )
-    )
-);
-```
+    );
+    ```
 4. This task helps you build a fully managed Lambda Kafka Sink Connector that routes your queries to a Search lambda agent , similar to how we did it for a sql agent.
 Goal: Stream search_embeddings Kafka topic data directly to your AWS Lambda.
 Step-by-step Setup:
@@ -491,82 +468,33 @@ Step-by-step Setup:
 
   2. Select AWS Lambda Sink Connector from the available connectors.
 
-  3. Fill in the relevant configuration details below and deploy the connector.
-  ```json
-  {
-  "config": {
-    "topics": "search_embeddings",
-    "schema.context.name": "default",
-    "input.data.format": "AVRO",
-    "connector.class": "LambdaSink",
-    "name": "SearchAgent_Sink",
-    "kafka.auth.mode": "KAFKA_API_KEY",
-    "kafka.api.key": "<YOUR_KAFKA_API_KEY>",
-    "kafka.api.secret": "****************************************************************",
-    "authentication.method": "Access Keys",
-    "aws.access.key.id": "********************",
-    "aws.secret.access.key": "****************************************",
-    "aws.lambda.configuration.mode": "single",
-    "aws.lambda.function.name": "search_agent",
-    "aws.lambda.invocation.type": "sync",
-    "aws.lambda.batch.size": "20",
-    "record.converter.class": "JsonKeyValueConverter",
-    "aws.lambda.socket.timeout": "50000",
-    "behavior.on.error": "log",
-    "max.poll.interval.ms": "300000",
-    "max.poll.records": "500",
-    "tasks.max": "1",
-    "auto.restart.on.user.error": "true",
-    "value.converter.decimal.format": "BASE64",
-    "value.converter.reference.subject.name.strategy": "DefaultReferenceSubjectNameStrategy",
-    "value.converter.value.subject.name.strategy": "TopicNameStrategy",
-    "key.converter.key.subject.name.strategy": "TopicNameStrategy"
-  }
-  }
-  ``` 
+  3. Fill in the relevant configuration details below and deploy the connector. *Leave all other values that are not shown below as default or empty.*
+      - Topic: search_embeddings
+      - AWS Lambda function name: search_agent
+      - Authentication Method: IAM Roles
+      - Provider Integration Name: <the AWS Lambda Sink integration you set up>
+      - Input Kafka record value format: AVRO
+      - Connector name: SearchAgent_Sink
+      
+  ![alt text](assets/img/two_lambda.png)
+
 
 ## Task 5: Integrate Scheduler Agent with Lambda Sink Connector
 This task helps you build a fully managed Lambda Kafka Sink Connector that routes your queries to a Scheduler lambda agent , similar to how we did it for a sql agent.
+
 Goal:
 Stream scheduler_agent_input Kafka topic data directly to your AWS Lambda.
-Step-by-step Setup:
-1. Go to Confluent Cloud > Connectors.
 
-2. Select AWS Lambda Sink Connector from the available connectors.
 
-3. Fill in the relevant configuration details below and deploy the connector.
-```json
-{
-  "config": {
-    "topics": "scheduler_agent_input",
-    "schema.context.name": "default",
-    "input.data.format": "AVRO",
-    "connector.class": "LambdaSink",
-    "name": "SchedulerAgentSink",
-    "kafka.auth.mode": "KAFKA_API_KEY",
-    "kafka.api.key": "<YOUR_KAFKA_API_KEY>",
-    "kafka.api.secret": "****************************************************************",
-    "authentication.method": "Access Keys",
-    "aws.access.key.id": "********************",
-    "aws.secret.access.key": "****************************************",
-    "aws.lambda.configuration.mode": "single",
-    "aws.lambda.function.name": "scheduler_agent",
-    "aws.lambda.invocation.type": "sync",
-    "aws.lambda.batch.size": "20",
-    "record.converter.class": "JsonKeyValueConverter",
-    "aws.lambda.socket.timeout": "50000",
-    "behavior.on.error": "log",
-    "max.poll.interval.ms": "300000",
-    "max.poll.records": "500",
-    "tasks.max": "1",
-    "auto.restart.on.user.error": "true",
-    "value.converter.decimal.format": "BASE64",
-    "value.converter.reference.subject.name.strategy": "DefaultReferenceSubjectNameStrategy",
-    "value.converter.value.subject.name.strategy": "TopicNameStrategy",
-    "key.converter.key.subject.name.strategy": "TopicNameStrategy"
-  }
-}
-```
+1. Set up one more AWS Lambda Sink Connector using the configuration details below and deploy the connector. *Leave all other values that are not shown below as default or empty.*
+      - Topic: scheduler_agent_input
+      - AWS Lambda function name: scheduler_agent
+      - Authentication Method: IAM Roles
+      - Provider Integration Name: <the AWS Lambda Sink integration you set up>
+      - Input Kafka record value format: AVRO
+      - Connector name: SchedulerAgentSink
+
+
 ## Task 06 (Optional) – Integrating Email service with Scheduler agent using AWS SNS
 You can send email notifications to about the meeting from the scheduler agent using AWS SNS service. The Scheduler agent pushes events to the SNS service. You can create an E-mail subscription out of the SNS topic using your email address to receive email notification.
 
