@@ -10,7 +10,7 @@ This project demonstrates how to build an LLM-powered multi-agent system for wor
 
 - Querying company/employee data from SQL databases
 - Searching context from internal documents using embeddings
-- Executing tasks like schedulin and sending emails using automation agents
+- Executing tasks like scheduling and sending emails using automation agents
 
 Participants will walk away with hands-on experience building a production-grade GenAI application with real-time agent coordination.
 
@@ -53,8 +53,6 @@ This architecture includes:
     2. AWS Account Access - Provided by workshop coordinators
     3. Confluent Cloud Account Access 
 
-<p> <b>Note:</b> For OpenAI API Key, if you don't have any existing account, you can accept the invite from openai with subject Confluent Workshops on OpenAI received on the mail you registered for the workshop and create an openai key.</p>
-
 - **Sign up for Confluent Cloud**
     - Navigate to [Confluent Cloud Sign Up](https://confluent.cloud/signup?utm_campaign=tm.fm-ams_cd.Q424_AMER_GenAI_RAG_Workshop&utm_medium=workshop).
     - Sign up with any of the desired identity providers or your email ID.
@@ -92,9 +90,14 @@ Create Confluent Cloud API Key for your confluent cloud account with resource sc
 
 
 3. ### Create a MongoDB Programmatic Access API Key
+If you currently have a MongoDB Atlas M0 (free) cluster, please delete it, or alternatively, create a new MongoDB account using a different email alias(yourname+mongo@email.com).
+Next, please follow these steps to create a programmatic access API key for your MongoDB Atlas account:
+
 Create MongoDB Programmatic Access api key for your mongo account - https://www.mongodb.com/docs/atlas/configure-api-access-org/
 * In Atlas, go to the Organization Access Manager page.
 * Click the Applications tab
+* Click on Add New on the top right corner
+<p><img src="assets/img/mongoorgapi.png" alt="nim" width="300" /></p>
 * Click on Create API Key with Organization Owner Permissions
 * Save the API Key for further use.
 
@@ -146,6 +149,9 @@ confluent flink connection create bedrock-text-connection \
   --aws-access-key <Replace with your own access key> \
   --aws-secret-key <Replace with your own access secret >
 ```
+
+<p><img src="assets/img/aimodelinference.png" alt="nim" width="300" /></p>
+
 
 3. Log in to your confluent cloud env and access flink workspace(UI tool to run your flinksql queries) to run following queries:
 
@@ -391,18 +397,12 @@ Before creating the connector, make sure the Lambda is properly configured.
 - Add below enviorment variable values: 
 
 ```bash
-BOOTSTRAP_ENDPOINT=<your-confluent-bootstrap-endpoint>
-KAFKA_API_KEY=<your-kafka-api-key>
-KAFKA_API_SECRET=<your-kafka-api-secret>
-SCHEMA_REGISTRY_API_KEY=<your-schema-registry-api-key>
-SCHEMA_REGISTRY_API_SECRET=<your-schema-registry-api-secret>
-SCHEMA_REGISTRY_ENDPOINT=https://<your-schema-registry-endpoint>
-TOPIC_NAME=sql_agent_response
+sql_agent_result_topic=sql_agent_response
 ```
 
 Once your Lambda is ready, proceed to configure the Confluent-managed Kafka Sink Connector to invoke this function on every message received in sql_agent_input.
 
-Step-by-step Setup:
+Step-by-step Setup for Connector:
 1. Go to Confluent Cloud > Connectors.
 
 2. Select AWS Lambda Sink Connector from the available connectors.
@@ -487,7 +487,18 @@ LATERAL TABLE(
 ```
 4. This task helps you build a fully managed Lambda Kafka Sink Connector that routes your queries to a Search lambda agent , similar to how we did it for a sql agent.
 Goal: Stream search_embeddings Kafka topic data directly to your AWS Lambda.
-Step-by-step Setup:
+Before creating the connector, make sure the Lambda is properly configured.
+- Open the AWS Console.
+- Search for and open your Lambda function (e.g., sql_agent).
+- Add the following environment variables to the function:
+- Add below enviorment variable values: 
+
+```bash
+search_agent_result_topic=search_agent_response
+```
+Once your Lambda is ready, proceed to configure the Confluent-managed Kafka Sink Connector to invoke this function on every message received in search_embeddings.
+
+Step-by-step Setup for Connector:
   1. Go to Confluent Cloud > Connectors.
 
   2. Select AWS Lambda Sink Connector from the available connectors.
@@ -530,6 +541,17 @@ Step-by-step Setup:
 This task helps you build a fully managed Lambda Kafka Sink Connector that routes your queries to a Scheduler lambda agent , similar to how we did it for a sql agent.
 Goal:
 Stream scheduler_agent_input Kafka topic data directly to your AWS Lambda.
+
+Before creating the connector, make sure the Lambda is properly configured.
+- Open the AWS Console.
+- Search for and open your Lambda function (e.g., scheduler_agent).
+- Add the following environment variables to the function:
+- Add below enviorment variable values: 
+
+```bash
+scheduler_agent_result_topic=scheduler_agent_response
+```
+
 Step-by-step Setup:
 1. Go to Confluent Cloud > Connectors.
 

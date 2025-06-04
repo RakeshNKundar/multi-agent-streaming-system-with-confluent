@@ -4,7 +4,7 @@ provider "aws" {
 
 
 resource "aws_s3_bucket" "lambda_layers" {
-  bucket        = "my-lambda-layers-${random_id.suffix.hex}"
+  bucket        = "code-bucket-${random_id.suffix.hex}"
   force_destroy = true
 }
 
@@ -188,6 +188,7 @@ resource "aws_lambda_function" "search_agent" {
   layers           = [aws_lambda_layer_version.search_agent_layer.arn]
   environment {
     variables = {
+      MONGO_HOST                 = replace(mongodbatlas_cluster.default.connection_strings.0.standard_srv, "mongodb+srv://", "")
       MONGO_USER                 = mongodbatlas_database_user.default.username
       MONGO_PASSWORD             = mongodbatlas_database_user.default.password
       DB_NAME                    = "workplace_knowledgebase"
