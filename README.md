@@ -145,8 +145,10 @@ This architecture includes:
 
 1. Go to the AWS Console and navigate to the Amazon Bedrock service.
 1. On the left hand panel, click on the `Model Access` option
+
     ![alt text](assets/img/model_access.png)
 1. Click the `Modify Access` button
+
     ![alt text](assets/img/modify_access.png)
 1. Enable the following models (it is strongly recommended to only enable these models or else enablement will stall and require AWS Support):
     - Titan Embeddings G1 - Text
@@ -160,7 +162,8 @@ This architecture includes:
 
 1. Navigate to the Environment labeled `confluent_agentic_workshop`
 
-1. Once in the Environment view, click the Integrations tab and create a new Connection. ![Creating a connection to Amazon Bedrock](assets/img/integration.png)
+1. Once in the Environment view, click the Integrations tab and create a new Connection. 
+![Creating a connection to Amazon Bedrock](assets/img/integration.png)
 
 1. Select Amazon Bedrock as the service with which to create a connection. ![alt text](assets/img/service_select.png)
 
@@ -171,10 +174,13 @@ This architecture includes:
     - aws session token - <Replace_with_your_own_session_token>
 
 1. Give your connection name of `bedrock-text-connection` and launch the connection. 
-![alt text](assets/img/name_integration.png)
+
+    ![alt text](assets/img/name_integration.png)
 
 
-1. Next, navigate to Flink with Confluent Cloud and open your SQL workspace. ![alt text](assets/img/flink_nav.png)
+1. Next, navigate to Flink with Confluent Cloud and open your SQL workspace. 
+
+    ![alt text](assets/img/flink_nav.png)
 
 1. Run following queries within the SQL workspace you've opened up:
 
@@ -449,7 +455,8 @@ Step-by-step Setup:
 3. Select the `sql_agent_input` topic. Each time a record lands in this topic, the Lambda function will get triggered. ![alt text](assets/img/topic_select.png)
 
 1. During the authentication part, be sure you point this connector to the `sql_agent` Lambda function and that you use the `IAM Roles` as the authentication method. The `Provider Integration` you created earlier is what you select last.
-![alt text](assets/img/use_integration.png)
+
+    ![alt text](assets/img/use_integration.png)
 
 1. Set the Input Kafka record value format to `AVRO`. Leave all other values as default/empty.
 sql_agent![alt text](assets/img/avro.png)
@@ -508,8 +515,9 @@ Step-by-step Setup:
       - Provider Integration Name: <the AWS Lambda Sink integration you set up>
       - Input Kafka record value format: AVRO
       - Connector name: SearchAgentSink
-      
-  ![alt text](assets/img/two_lambda.png)
+
+
+   ![alt text](assets/img/two_lambda.png)
 
 
 ## Task 5: Integrate Scheduler Agent with Lambda Sink Connector
