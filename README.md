@@ -143,7 +143,19 @@ This architecture includes:
 
 ## Task 1 – Orchestrator Agent (LLM-based Decision Making)
 
-
+1. Go to the AWS Console and navigate to the Amazon Bedrock service.
+1. On the left hand panel, click on the `Model Access` option
+    ![alt text](assets/img/model_access.png)
+1. Click the `Modify Access` button
+    ![alt text](assets/img/modify_access.png)
+1. Enable the following models (it is strongly recommended to only enable these models or else enablement will stall and require AWS Support):
+    - Titan Embeddings G1 - Text
+    - Claude 3 Sonnet
+  
+    It should only take 1-5 minutes for the models to enable. You will see the following when models are ready.
+    ![alt text](assets/img/model_active.png)
+    ![alt text](assets/img/model_active_2.png) 
+  
 1. Login to your confluent cloud account to see the different resources deployed on your environment.
 
 1. Navigate to the Environment labeled `confluent_agentic_workshop`
@@ -440,14 +452,14 @@ Step-by-step Setup:
 ![alt text](assets/img/use_integration.png)
 
 1. Set the Input Kafka record value format to `AVRO`. Leave all other values as default/empty.
-![alt text](assets/img/avro.png)
+sql_agent![alt text](assets/img/avro.png)
 
-1. Lastly, provide your connector a name of `sql_agent_connector`
+1. Lastly, provide your connector a name of `SQLAgentSink`
 
 ## Task 4: Context Retrieval via Vector Search 
 We now add intelligence to our Research Agent using Amazon Bedrock embeddings + MongoDB vector search.
 
-1. Navivigate to the Integrations tab within your environment and create a anothers Connections integration. This time with the endpoint of `https://bedrock-runtime.us-east-1.amazonaws.com/model/amazon.titan-embed-text-v1/invoke`. ![alt text](assets/img/second_integration.png)
+1. Navivigate to the Integrations tab within your environment and create a anothers Connections integration. This time with the name of `bedrock-embedding-connection` and an endpoint of `https://bedrock-runtime.<your_current_region>.amazonaws.com/model/amazon.titan-embed-text-v1/invoke`. ![alt text](assets/img/second_integration.png)
 
 
     The end result should look like this:
@@ -495,7 +507,7 @@ Step-by-step Setup:
       - Authentication Method: IAM Roles
       - Provider Integration Name: <the AWS Lambda Sink integration you set up>
       - Input Kafka record value format: AVRO
-      - Connector name: SearchAgent_Sink
+      - Connector name: SearchAgentSink
       
   ![alt text](assets/img/two_lambda.png)
 

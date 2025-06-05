@@ -2,7 +2,7 @@ data "confluent_organization" "default" {}
 
 data "confluent_flink_region" "default" {
   cloud  = "AWS"
-  region = "us-east-1"
+  region = data.aws_region.current.name
 }
 
 resource "confluent_role_binding" "environment-admin" {
@@ -14,7 +14,7 @@ resource "confluent_role_binding" "environment-admin" {
 resource "confluent_flink_compute_pool" "default" {
   display_name = "multi-agent-workplace-system_pool"
   cloud        = "AWS"
-  region       = "us-east-1"
+  region       = data.aws_region.current.name
   max_cfu      = 50
   environment {
     id = confluent_environment.default.id

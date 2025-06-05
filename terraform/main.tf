@@ -33,7 +33,7 @@ data "http" "myip" {
 data "confluent_ip_addresses" "default" {
   filter {
     clouds        = ["AWS"]
-    regions       = ["us-east-1"]
+    regions       = [data.aws_region.current.name]
     services      = ["CONNECT"]
     address_types = ["EGRESS"]
   }
