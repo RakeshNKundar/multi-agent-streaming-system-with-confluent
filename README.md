@@ -47,13 +47,12 @@ This architecture includes:
     - Python3 > 3.9
     - [Terraform CLI](https://developer.hashicorp.com/terraform/install)
     - [Confluent Cloud CLI](https://docs.confluent.io/confluent-cli/current/install.html)
+    - [MongoDB Database Tools](https://www.mongodb.com/docs/database-tools/installation/)
 
 - **Access:** 
     1. MongoDB Atlas Account Access - https://www.mongodb.com/
     2. AWS Account Access - Provided by workshop coordinators
     3. Confluent Cloud Account Access 
-
-<p> <b>Note:</b> For OpenAI API Key, if you don't have any existing account, you can accept the invite from openai with subject Confluent Workshops on OpenAI received on the mail you registered for the workshop and create an openai key.</p>
 
 - **Sign up for Confluent Cloud**
     - Navigate to [Confluent Cloud Sign Up](https://confluent.cloud/signup?utm_campaign=tm.fm-ams_cd.Q424_AMER_GenAI_RAG_Workshop&utm_medium=workshop).
@@ -77,49 +76,70 @@ This architecture includes:
 ## 🚀 Quick Start (TL;DR)
 
 1. ### Clone the workshop Github Repo on your local
-```bash
-git clone https://github.com/RakeshNKundar/multi-agent-streaming-system-with-confluent.git
-```
+    ```bash
+    git clone https://github.com/RakeshNKundar/multi-agent-streaming-system-with-confluent.git
+    ```
 
-2. ### Create a Confluent Cloud API Key
-Create Confluent Cloud API Key for your confluent cloud account with resource scope as Cloud resource management.
-- Go to https://confluent.cloud/settings/api-keys 
-- Add API Key 
-- Cloud resource management 
-- Download API Key 
+1. ### Create a Confluent Cloud API Key
+    Create Confluent Cloud API Key for your confluent cloud account with resource scope as Cloud resource management.
+    - Go to https://confluent.cloud/settings/api-keys 
+    - Add API Key 
+    - Cloud resource management 
+    - Download API Key 
 
-<p><img src="assets/img/apikey.png" alt="nim" width="300" /></p>
+    <p><img src="assets/img/apikey.png" alt="nim" width="300" /></p>
 
 
-3. ### Create a MongoDB Programmatic Access API Key
-Create MongoDB Programmatic Access api key for your mongo account - https://www.mongodb.com/docs/atlas/configure-api-access-org/
-* In Atlas, go to the Organization Access Manager page.
-* Click the Applications tab
-* Click on Create API Key with Organization Owner Permissions
-* Save the API Key for further use.
+1. ### Create a MongoDB Programmatic Access API Key
+    Create MongoDB Programmatic Access api key for your mongo account - https://www.mongodb.com/docs/atlas/configure-api-access-org/
+    * In Atlas, go to the Organization Access Manager page.
+    * Click the Applications tab
+    * Click on Create API Key with Organization Owner Permissions
+    * Save the API Key for further use.
+      <p><img src="assets/img/apikeymongo.png" alt="nim" width="300" /></p>
 
-<p><img src="assets/img/apikeymongo.png" alt="nim" width="300" /></p>
+1. ### Retrieve your AWS Access Keys from a Confluent-provided AWS account
+    If an AWS account is being provided to you for this workshop, follow the below instructions. 
+    * Navigate to https://catalog.us-east-1.prod.workshops.aws
+    * Sign in using the `Email One Time Password` option. 
+    * Once logged in, input the Event access code that you were given for this workhop. If you do not have your event access code, please notify an event supporter to obtain an access code.
+    ![alt text](assets/img/event_access_code.png)
+    * Agree to the Terms and Conditions to continue
+    * You'll arrive at the page where you can access your Confluent-provided AWS account. The first link will allow you to access the AWS console of your AWS account. Go ahead and click the link to open the AWS console in a new tab.
+
+      ![alt text](assets/img/console.png)
+    * The other link provides the necessary access keys and session token to deploy resources into your Confluent-provided AWS account using Terraform. Copy and paste these values in a .txt file. You will uses these values multiple times throughout the workshop.
+
+      ![alt text](assets/img/get_keys.png)
+      ![alt text](assets/img/ws_keys.png)
+
+1. ### [Alternative] Retrieve your AWS Access Keys from an AWS account you provide
+    In the event an AWS account is not provided to you for this workshop, you can use your own AWS account. When doing so you can deploy the upcoming Terraform script using (IAM Access Keys)[https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html] or the (AWS CLI Profile)[https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-options.html] (ex. `aws configure --profile <profilename>`). 
+
+   
 
 4. ### Setup environment variables
 
-1. Navigate to <b>setup/init.sh</b> and edit the following:
+  * Navigate to <b>setup/init.sh</b> and edit the following:
 
-```bash
-# setup/init.sh
+    ```bash
+    # setup/init.sh
 
-export TF_VAR_cc_cloud_api_key="<Confluent Cloud API Key>"
-export TF_VAR_cc_cloud_api_secret="<Confluent Cloud API Secret>"
-export TF_VAR_mongodbatlas_public_key="<MongoDB Public API Key>"
-export TF_VAR_mongodbatlas_private_key="<MongoDB Private API Key>"
-export AWS_ACCESS_KEY_ID="<AWS Access Key ID"
-export AWS_SECRET_ACCESS_KEY="<AWS Access Key Secret>"
-```
+    export TF_VAR_cc_cloud_api_key="<Confluent Cloud API Key>"
+    export TF_VAR_cc_cloud_api_secret="<Confluent Cloud API Secret>"
+    export TF_VAR_mongodbatlas_public_key="<MongoDB Public API Key>"
+    export TF_VAR_mongodbatlas_private_key="<MongoDB Private API Key>"
+    export AWS_DEFAULT_REGION="us-west-2" #If using a Confluent-provided AWS account, make sure this region matches the region found in the above steps (most likely it will be us-west-2)
+    export AWS_ACCESS_KEY_ID="<AWS Access Key ID"
+    export AWS_SECRET_ACCESS_KEY="<AWS Access Key Secret>"
+    export AWS_SESSION_TOKEN="<AWS Session Token>" #Only necessary if you are using a Confluent-provided AWS account or using the temporary credentials from your personal AWS account.
+    ```
 2. After Setting the variables, run:
 
-```bash
-chmod +x ./setup/init.sh
-./setup/init.sh
-```
+    ```bash
+    chmod +x ./setup/init.sh
+    ./setup/init.sh
+    ```
 
 ## Task 1 – Orchestrator Agent (LLM-based Decision Making)
 
@@ -134,8 +154,9 @@ chmod +x ./setup/init.sh
 
 1. Fill out the form using following:
     - Endpoint: `https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-sonnet-20240229-v1:0/invoke`
-    - aws-access-key - <Replace_with_your_own_access_key> 
-    - aws-secret-key  - <Replace_with_your_own_access_key>
+    - aws access key - <Replace_with_your_own_access_key> 
+    - aws secret key  - <Replace_with_your_own_access_secret_key>
+    - aws session token - <Replace_with_your_own_session_token>
 
 1. Give your connection name of `bedrock-text-connection` and launch the connection. 
 ![alt text](assets/img/name_integration.png)
