@@ -114,7 +114,7 @@ This architecture includes:
       ![alt text](assets/img/ws_keys.png)
 
 1. ### [Alternative] Retrieve your AWS Access Keys from an AWS account you provide
-    In the event an AWS account is not provided to you for this workshop, you can use your own AWS account. When doing so you can deploy the upcoming Terraform script using (IAM Access Keys)[https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html] or the (AWS CLI Profile)[https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-options.html] (ex. `aws configure --profile <profilename>`). 
+    In the event an AWS account is not provided to you for this workshop, you can use your own AWS account. When doing so you can deploy the upcoming Terraform script using [IAM Access Keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html) or the [AWS CLI Profile](https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-options.html) (ex. `aws configure --profile <profilename>`). 
 
    
 
@@ -168,7 +168,7 @@ This architecture includes:
 1. Select Amazon Bedrock as the service with which to create a connection. ![alt text](assets/img/service_select.png)
 
 1. Fill out the form using following:
-    - Endpoint: `https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-sonnet-20240229-v1:0/invoke`
+    - Endpoint: `https://bedrock-runtime.<your_region>.amazonaws.com/model/anthropic.claude-3-sonnet-20240229-v1:0/invoke`
     - aws access key - <Replace_with_your_own_access_key> 
     - aws secret key  - <Replace_with_your_own_access_secret_key>
     - aws session token - <Replace_with_your_own_session_token>
@@ -466,7 +466,11 @@ sql_agent![alt text](assets/img/avro.png)
 ## Task 4: Context Retrieval via Vector Search 
 We now add intelligence to our Research Agent using Amazon Bedrock embeddings + MongoDB vector search.
 
-1. Navivigate to the Integrations tab within your environment and create a anothers Connections integration. This time with the name of `bedrock-embedding-connection` and an endpoint of `https://bedrock-runtime.<your_current_region>.amazonaws.com/model/amazon.titan-embed-text-v1/invoke`. ![alt text](assets/img/second_integration.png)
+1. Navivigate to the Integrations tab within your environment and create a anothers Connections integration. This time with the the following: 
+ - Name: `bedrock-embedding-connection` 
+ - Endpoint: `https://bedrock-runtime.<your_current_region>.amazonaws.com/model/amazon.titan-embed-text-v1/invoke`. 
+ 
+    ![alt text](assets/img/second_integration.png)
 
 
     The end result should look like this:
