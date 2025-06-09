@@ -1,3 +1,4 @@
+
 resource "confluent_service_account" "default" {
   display_name = "workplace_assistant_sa"
   description  = "Service Account for workplace assistant pipeline"
@@ -15,7 +16,7 @@ resource "confluent_kafka_cluster" "default" {
   display_name = "workplace_assistant"
   availability = "SINGLE_ZONE"
   cloud        = "AWS"
-  region       = "us-east-1"
+  region       = data.aws_region.current.name
   standard {}
 
   environment {
@@ -31,6 +32,12 @@ resource "confluent_role_binding" "cluster-admin" {
   principal   = "User:${confluent_service_account.default.id}"
   role_name   = "CloudClusterAdmin"
   crn_pattern = confluent_kafka_cluster.default.rbac_crn
+}
+
+resource "confluent_role_binding" "env-admin" {
+  principal   = "User:${confluent_service_account.default.id}"
+  role_name   = "EnvironmentAdmin"
+  crn_pattern = confluent_environment.default.resource_name
 }
 
 resource "confluent_role_binding" "topic-write" {

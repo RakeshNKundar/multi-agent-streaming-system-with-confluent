@@ -1,6 +1,7 @@
+
 data "confluent_schema_registry_region" "default" {
   cloud   = "AWS"
-  region  = "us-east-1"
+  region  = data.aws_region.current.name
   package = "ESSENTIALS"
 }
 

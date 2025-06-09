@@ -47,6 +47,7 @@ This architecture includes:
     - Python3 > 3.9
     - [Terraform CLI](https://developer.hashicorp.com/terraform/install)
     - [Confluent Cloud CLI](https://docs.confluent.io/confluent-cli/current/install.html)
+    - [MongoDB Database Tools](https://www.mongodb.com/docs/database-tools/installation/)
 
 - **Access:** 
     1. MongoDB Atlas Account Access - https://www.mongodb.com/
@@ -75,59 +76,90 @@ This architecture includes:
 ## 🚀 Quick Start (TL;DR)
 
 1. ### Clone the workshop Github Repo on your local
-```bash
-git clone https://github.com/RakeshNKundar/multi-agent-streaming-system-with-confluent.git
-```
+    ```bash
+    git clone https://github.com/RakeshNKundar/multi-agent-streaming-system-with-confluent.git
+    ```
 
-2. ### Create a Confluent Cloud API Key
-Create Confluent Cloud API Key for your confluent cloud account with resource scope as Cloud resource management.
-- Go to https://confluent.cloud/settings/api-keys 
-- Add API Key 
-- Cloud resource management 
-- Download API Key 
+1. ### Create a Confluent Cloud API Key
+    Create Confluent Cloud API Key for your confluent cloud account with resource scope as Cloud resource management.
+    - Go to https://confluent.cloud/settings/api-keys 
+    - Add API Key 
+    - Cloud resource management 
+    - Download API Key 
 
-<p><img src="assets/img/apikey.png" alt="nim" width="300" /></p>
+    <p><img src="assets/img/apikey.png" alt="nim" width="300" /></p>
 
 
-3. ### Create a MongoDB Programmatic Access API Key
-If you currently have a MongoDB Atlas M0 (free) cluster, please delete it, or alternatively, create a new MongoDB account using a different email alias(yourname+mongo@email.com).
-Next, please follow these steps to create a programmatic access API key for your MongoDB Atlas account:
+1. ### Create a MongoDB Programmatic Access API Key
+    Create MongoDB Programmatic Access api key for your mongo account - https://www.mongodb.com/docs/atlas/configure-api-access-org/
+    * In Atlas, go to the Organization Access Manager page.
+    * Click the Applications tab
+    * Click on Create API Key with Organization Owner Permissions
+    * Save the API Key for further use.
+      <p><img src="assets/img/apikeymongo.png" alt="nim" width="300" /></p>
 
-Create MongoDB Programmatic Access api key for your mongo account - https://www.mongodb.com/docs/atlas/configure-api-access-org/
-* In Atlas, go to the Organization Access Manager page.
-* Click the Applications tab
-* Click on Add New on the top right corner
-<p><img src="assets/img/mongoorgapi.png" alt="nim" width="300" /></p>
-* Click on Create API Key with Organization Owner Permissions
-* Save the API Key for further use.
+1. ### Retrieve your AWS Access Keys from a Confluent-provided AWS account
+    If an AWS account is being provided to you for this workshop, follow the below instructions. 
+    * Navigate to https://catalog.us-east-1.prod.workshops.aws
+    * Sign in using the `Email One Time Password` option. 
+    * Once logged in, input the Event access code that you were given for this workhop. If you do not have your event access code, please notify an event supporter to obtain an access code.
+    ![alt text](assets/img/event_access_code.png)
+    * Agree to the Terms and Conditions to continue
+    * You'll arrive at the page where you can access your Confluent-provided AWS account. The first link will allow you to access the AWS console of your AWS account. Go ahead and click the link to open the AWS console in a new tab.
 
-<p><img src="assets/img/apikeymongo.png" alt="nim" width="300" /></p>
+      ![alt text](assets/img/console.png)
+    * The other link provides the necessary access keys and session token to deploy resources into your Confluent-provided AWS account using Terraform. Copy and paste these values in a .txt file. You will uses these values multiple times throughout the workshop.
+
+      ![alt text](assets/img/get_keys.png)
+      ![alt text](assets/img/ws_keys.png)
+
+1. ### [Alternative] Retrieve your AWS Access Keys from an AWS account you provide
+    In the event an AWS account is not provided to you for this workshop, you can use your own AWS account. When doing so you can deploy the upcoming Terraform script using [IAM Access Keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html) or the [AWS CLI Profile](https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-options.html) (ex. `aws configure --profile <profilename>`). 
+
+   
 
 4. ### Setup environment variables
 
-1. Navigate to <b>setup/init.sh</b> and edit the following:
+  * Navigate to <b>setup/init.sh</b> and edit the following:
 
-```bash
-# setup/init.sh
+    ```bash
+    # setup/init.sh
 
-export TF_VAR_cc_cloud_api_key="<Confluent Cloud API Key>"
-export TF_VAR_cc_cloud_api_secret="<Confluent Cloud API Secret>"
-export TF_VAR_mongodbatlas_public_key="<MongoDB Public API Key>"
-export TF_VAR_mongodbatlas_private_key="<MongoDB Private API Key>"
-export AWS_ACCESS_KEY_ID="<AWS Access Key ID"
-export AWS_SECRET_ACCESS_KEY="<AWS Access Key Secret>"
-```
+    export TF_VAR_cc_cloud_api_key="<Confluent Cloud API Key>"
+    export TF_VAR_cc_cloud_api_secret="<Confluent Cloud API Secret>"
+    export TF_VAR_mongodbatlas_public_key="<MongoDB Public API Key>"
+    export TF_VAR_mongodbatlas_private_key="<MongoDB Private API Key>"
+    export AWS_DEFAULT_REGION="us-west-2" #If using a Confluent-provided AWS account, make sure this region matches the region found in the above steps (most likely it will be us-west-2)
+    export AWS_ACCESS_KEY_ID="<AWS Access Key ID"
+    export AWS_SECRET_ACCESS_KEY="<AWS Access Key Secret>"
+    export AWS_SESSION_TOKEN="<AWS Session Token>" #Only necessary if you are using a Confluent-provided AWS account or using the temporary credentials from your personal AWS account.
+    ```
 2. After Setting the variables, run:
 
-```bash
-chmod +x ./setup/init.sh
-./setup/init.sh
-```
+    ```bash
+    chmod +x ./setup/init.sh
+    ./setup/init.sh
+    ```
 
 ## Task 01 – Orchestrator Agent (LLM-based Decision Making)
 
+1. Go to the AWS Console and navigate to the Amazon Bedrock service.
+2. On the left hand panel, click on the `Model Access` option
 
-1. Login to your confluent cloud account to see the different resources deployed on your environment.Make a not of your environment id.
+    ![alt text](assets/img/model_access.png)
+3. Click the `Modify Access` button
+
+    ![alt text](assets/img/modify_access.png)
+4. Enable the following models (it is strongly recommended to only enable these models or else enablement will stall and require AWS Support):
+    - Titan Embeddings G1 - Text
+    - Claude 3 Sonnet
+  
+    It should only take 1-5 minutes for the models to enable. You will see the following when models are ready.
+    ![alt text](assets/img/model_active.png)
+    ![alt text](assets/img/model_active_2.png) 
+  
+
+1. Login to your confluent cloud account to see the different resources deployed on your environment.
 
 2. In a different terminal, run:
 Login to confluent cloud
@@ -150,10 +182,25 @@ confluent flink connection create bedrock-text-connection \
   --aws-secret-key <Replace with your own access secret >
 ```
 
-<p><img src="assets/img/aimodelinference.png" alt="nim" width="300" /></p>
+1. Once in the Environment view, click the Integrations tab and create a new Connection. 
+![Creating a connection to Amazon Bedrock](assets/img/integration.png)
+
+1. Select Amazon Bedrock as the service with which to create a connection. ![alt text](assets/img/service_select.png)
+
+1. Fill out the form using following:
+    - Endpoint: `https://bedrock-runtime.<your_region>.amazonaws.com/model/anthropic.claude-3-sonnet-20240229-v1:0/invoke`
+    - aws access key - <Replace_with_your_own_access_key> 
+    - aws secret key  - <Replace_with_your_own_access_secret_key>
+    - aws session token - <Replace_with_your_own_session_token>
+
+1. Give your connection name of `bedrock-text-connection` and launch the connection. 
+
+    ![alt text](assets/img/name_integration.png)
 
 
-3. Log in to your confluent cloud env and access flink workspace(UI tool to run your flinksql queries) to run following queries:
+1. Next, navigate to Flink with Confluent Cloud and open your SQL workspace. 
+
+    ![alt text](assets/img/flink_nav.png)
 
 ```sql
 CREATE MODEL BedrockGeneralModel INPUT (text STRING) OUTPUT (response STRING) COMMENT 'General model with no system prompt.'
@@ -556,6 +603,95 @@ Step-by-step Setup:
 1. Go to Confluent Cloud > Connectors.
 
 2. Select AWS Lambda Sink Connector from the available connectors.
+![alt text](assets/img/connector_select.png)
+
+3. Select the `sql_agent_input` topic. Each time a record lands in this topic, the Lambda function will get triggered. ![alt text](assets/img/topic_select.png)
+
+1. During the authentication part, be sure you point this connector to the `sql_agent` Lambda function and that you use the `IAM Roles` as the authentication method. The `Provider Integration` you created earlier is what you select last.
+
+    ![alt text](assets/img/use_integration.png)
+
+1. Set the Input Kafka record value format to `AVRO`. Leave all other values as default/empty.
+sql_agent![alt text](assets/img/avro.png)
+
+1. Lastly, provide your connector a name of `SQLAgentSink`
+
+## Task 4: Context Retrieval via Vector Search 
+We now add intelligence to our Research Agent using Amazon Bedrock embeddings + MongoDB vector search.
+
+1. Navivigate to the Integrations tab within your environment and create a anothers Connections integration. This time with the the following: 
+ - Name: `bedrock-embedding-connection` 
+ - Endpoint: `https://bedrock-runtime.<your_current_region>.amazonaws.com/model/amazon.titan-embed-text-v1/invoke`. 
+ 
+    ![alt text](assets/img/second_integration.png)
+
+
+    The end result should look like this:
+    ![alt text](assets/img/both_integrations.png)
+
+
+
+1. Navigate back to Flink and run the following queries:
+
+    Create Bedrock Model in Flink SQL
+    ```sql
+    CREATE MODEL bedrock_embed
+    INPUT (text STRING)
+    OUTPUT (response ARRAY<FLOAT>)
+    WITH (
+      'bedrock.connection'='bedrock-embedding-connection',
+      'bedrock.input_format'='AMAZON-TITAN-EMBED',
+      'provider'='bedrock',
+      'task'='embedding'
+    );
+    ```
+
+3. Embed User Queries
+    ```sql
+    CREATE TABLE search_embeddings AS 
+    SELECT CAST(message_id AS BYTES) as key,`response` as query_embedding, query ,message_id ,employee_id ,user_email,message,session_id ,`timestamp` from `search_agent_input`, 
+    LATERAL TABLE(
+        ML_PREDICT(
+            'bedrock_embed',(
+                'queryFromEmployee: ' || query 
+            )
+        )
+    );
+    ```
+4. This task helps you build a fully managed Lambda Kafka Sink Connector that routes your queries to a Search lambda agent , similar to how we did it for a sql agent.
+Goal: Stream search_embeddings Kafka topic data directly to your AWS Lambda.
+Step-by-step Setup:
+  1. Go to Confluent Cloud > Connectors.
+
+  2. Select AWS Lambda Sink Connector from the available connectors.
+
+  3. Fill in the relevant configuration details below and deploy the connector. *Leave all other values that are not shown below as default or empty.*
+      - Topic: search_embeddings
+      - AWS Lambda function name: search_agent
+      - Authentication Method: IAM Roles
+      - Provider Integration Name: <the AWS Lambda Sink integration you set up>
+      - Input Kafka record value format: AVRO
+      - Connector name: SearchAgentSink
+
+
+   ![alt text](assets/img/two_lambda.png)
+
+
+## Task 5: Integrate Scheduler Agent with Lambda Sink Connector
+This task helps you build a fully managed Lambda Kafka Sink Connector that routes your queries to a Scheduler lambda agent , similar to how we did it for a sql agent.
+
+Goal:
+Stream scheduler_agent_input Kafka topic data directly to your AWS Lambda.
+
+
+1. Set up one more AWS Lambda Sink Connector using the configuration details below and deploy the connector. *Leave all other values that are not shown below as default or empty.*
+      - Topic: scheduler_agent_input
+      - AWS Lambda function name: scheduler_agent
+      - Authentication Method: IAM Roles
+      - Provider Integration Name: <the AWS Lambda Sink integration you set up>
+      - Input Kafka record value format: AVRO
+      - Connector name: SchedulerAgentSink
+
 
 3. Fill in the relevant configuration details below and deploy the connector.
 ```json

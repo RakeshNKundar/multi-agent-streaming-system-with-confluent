@@ -54,7 +54,7 @@ resource "mongodbatlas_cluster" "default" {
   name                        = "multi-agent-workplace-system"
   provider_name               = "TENANT"
   backing_provider_name       = "AWS"
-  provider_region_name        = "US_EAST_1"
+  provider_region_name        = data.aws_region.current.name == "us-east-1" ? "US_EAST_1" :  "US_WEST_2"
   provider_instance_size_name = "M0"
 }
 

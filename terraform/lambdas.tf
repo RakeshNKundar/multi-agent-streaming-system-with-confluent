@@ -1,7 +1,8 @@
-provider "aws" {
-  region = "us-east-1"
-}
 
+
+provider "aws" {
+}
+data "aws_region" "current" {}
 
 resource "aws_s3_bucket" "lambda_layers" {
   bucket        = "code-bucket-${random_id.suffix.hex}"
@@ -127,7 +128,7 @@ resource "aws_lambda_function" "sql_agent" {
       SCHEMA_REGISTRY_API_KEY    = confluent_api_key.schema-registry-api-key.id
       SCHEMA_REGISTRY_API_SECRET = confluent_api_key.schema-registry-api-key.secret
       SCHEMA_REGISTRY_ENDPOINT   = confluent_schema_registry_cluster.default.rest_endpoint
-      sql_agent_result_topic     = "<Enter_sql_agent_result_topic_name>"
+      sql_agent_result_topic     = "sql_agent_response"
     }
   }
 }
@@ -162,7 +163,7 @@ resource "aws_lambda_function" "scheduler_agent" {
       SCHEMA_REGISTRY_API_KEY      = confluent_api_key.schema-registry-api-key.id
       SCHEMA_REGISTRY_API_SECRET   = confluent_api_key.schema-registry-api-key.secret
       SCHEMA_REGISTRY_ENDPOINT     = confluent_schema_registry_cluster.default.rest_endpoint
-      scheduler_agent_result_topic = "<Enter_scheduler_agent_result_topic_name>"
+      scheduler_agent_result_topic = "scheduler_agent_response"
       SNS_ARN                      = aws_sns_topic.gameday_sns_topic.arn
     }
   }
@@ -191,6 +192,7 @@ resource "aws_lambda_function" "search_agent" {
       MONGO_HOST                 = replace(mongodbatlas_cluster.default.connection_strings.0.standard_srv, "mongodb+srv://", "")
       MONGO_USER                 = mongodbatlas_database_user.default.username
       MONGO_PASSWORD             = mongodbatlas_database_user.default.password
+      MONGO_URI_RAW                 = mongodbatlas_cluster.default.srv_address
       DB_NAME                    = "workplace_knowledgebase"
       COLLECTION_NAME            = "knowledge_collection"
       BOOTSTRAP_ENDPOINT         = confluent_kafka_cluster.default.bootstrap_endpoint
@@ -199,7 +201,7 @@ resource "aws_lambda_function" "search_agent" {
       SCHEMA_REGISTRY_API_KEY    = confluent_api_key.schema-registry-api-key.id
       SCHEMA_REGISTRY_API_SECRET = confluent_api_key.schema-registry-api-key.secret
       SCHEMA_REGISTRY_ENDPOINT   = confluent_schema_registry_cluster.default.rest_endpoint
-      search_agent_result_topic  = "<Enter_search_agent_result_topic_name>"
+      search_agent_result_topic  = "search_agent_response"
     }
   }
 }

@@ -52,3 +52,11 @@ output "flink_api_secret" {
   value     = confluent_api_key.flink-default.secret
   sensitive = true
 }
+
+output "deployed_region" {
+  value = data.aws_region.current.name
+}
+
+output "mongo_uri" {
+  value = mongodbatlas_cluster.default.srv_address
+}
