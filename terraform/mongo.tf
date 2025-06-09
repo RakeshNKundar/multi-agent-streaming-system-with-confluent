@@ -2,6 +2,14 @@ data "mongodbatlas_project" "default" {
   name = "Project 0"
 }
 
+
+resource "mongodbatlas_project_ip_access_list" "allow_all_ips" {
+  project_id = data.mongodbatlas_project.default.id
+  cidr_block = "0.0.0.0/0"
+  comment    = "Allow all IPs for development"
+}
+
+
 locals {
   mongo_workshop_database            = "workplace_knowledgebase"
   mongo_workshop_database_user       = "confluent"

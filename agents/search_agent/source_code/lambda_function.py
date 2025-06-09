@@ -2,15 +2,12 @@ import json
 from pymongo import MongoClient
 from avro_kafka_producer import produce_context_result,build_summary_from_doc
 import os 
-#MONGO_URI_RAW="mongodb+srv://multi-agent-workplace-s.yo0olff.mongodb.net"
-MONGO_URI_RAW_STRING=os.getenv("MONGO_URI_RAW")
-MONGO_ENDPOINT=MONGO_URI_RAW_STRING.replace("mongodb+srv://", "")
-AUTH=f"{os.getenv("MONGO_USER")}:{os.getenv("MONGO_PASSWORD")}"
-SRV_PREFIX="mongodb+srv://"
-MONGO_URI = SRV_PREFIX + AUTH + "@" + MONGO_ENDPOINT + "/"
 
-#MONGO_URI = f"mongodb+srv://{os.getenv("MONGO_USER")}:{os.getenv("MONGO_PASSWORD")}@multi-agent-workplace-s.ljgpskm.mongodb.net/"
-print(MONGO_URI)
+
+MONGO_HOST = os.getenv("MONGO_HOST")
+MONGO_USER = os.getenv("MONGO_USER")
+MONGO_PASSWORD = os.getenv("MONGO_PASSWORD")
+MONGO_URI = f"mongodb+srv://{MONGO_USER}:{MONGO_PASSWORD}@{MONGO_HOST}/"
 DB_NAME = os.getenv("DB_NAME")
 COLLECTION_NAME = os.getenv("COLLECTION_NAME")
 VECTOR_FIELD = "contentEmbedding"
