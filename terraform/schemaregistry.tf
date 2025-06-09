@@ -32,7 +32,7 @@ resource "confluent_role_binding" "schema-write" {
 # FlinkDeveloper
 
 resource "confluent_api_key" "schema-registry-api-key" {
-  display_name = "sentiment-analysis-schema-registry-api-key"
+  display_name = "sentiment-analysis-schema-registry-api-key-${random_string.random.id}"
   description  = "Schema Registry API Key that is owned by default service account"
   owner {
     id          = confluent_service_account.default.id

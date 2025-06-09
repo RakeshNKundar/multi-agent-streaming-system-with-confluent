@@ -1,11 +1,11 @@
 
 resource "confluent_service_account" "default" {
-  display_name = "workplace_assistant_sa"
+  display_name = "workplace_assistant_sa_${random_string.random.id}"
   description  = "Service Account for workplace assistant pipeline"
 }
 
 resource "confluent_environment" "default" {
-  display_name = "confluent_agentic_workshop"
+  display_name = "confluent_agentic_workshop_${random_string.random.id}"
 
   lifecycle {
     prevent_destroy = false
@@ -13,7 +13,7 @@ resource "confluent_environment" "default" {
 }
 
 resource "confluent_kafka_cluster" "default" {
-  display_name = "workplace_assistant"
+  display_name = "workplace_assistant_${random_string.random.id}"
   availability = "SINGLE_ZONE"
   cloud        = "AWS"
   region       = data.aws_region.current.name
@@ -54,7 +54,7 @@ resource "confluent_role_binding" "topic-read" {
 
 
 resource "confluent_api_key" "cluster-api-key" {
-  display_name = "workplace-assistant-kafka-api-key"
+  display_name = "workplace-assistant-kafka-api-key-${random_string.random.id}"
   description  = "Kafka API Key that is owned by default service account"
   owner {
     id          = confluent_service_account.default.id

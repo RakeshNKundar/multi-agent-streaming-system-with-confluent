@@ -3,7 +3,6 @@ from pymongo import MongoClient
 from avro_kafka_producer import produce_context_result,build_summary_from_doc
 import os 
 
-
 MONGO_HOST = os.getenv("MONGO_HOST")
 MONGO_USER = os.getenv("MONGO_USER")
 MONGO_PASSWORD = os.getenv("MONGO_PASSWORD")

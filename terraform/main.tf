@@ -11,6 +11,13 @@ terraform {
   }
 }
 
+
+resource "random_string" "random" {
+  length  = 4
+  upper   = false
+  special = false
+}
+
 provider "confluent" {
   cloud_api_key    = var.cc_cloud_api_key
   cloud_api_secret = var.cc_cloud_api_secret

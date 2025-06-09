@@ -5,7 +5,7 @@ provider "aws" {
 data "aws_region" "current" {}
 
 resource "aws_s3_bucket" "lambda_layers" {
-  bucket        = "code-bucket-${random_id.suffix.hex}"
+  bucket        = "code-bucket-${random_string.random.id}"
   force_destroy = true
 }
 
@@ -35,7 +35,7 @@ resource "random_id" "suffix" {
 }
 
 resource "aws_iam_role" "lambda_exec_role" {
-  name = "lambda_exec_role"
+  name = "lambda_exec_role_${random_string.random.id}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -50,7 +50,7 @@ resource "aws_iam_role" "lambda_exec_role" {
 }
 
 resource "aws_lambda_layer_version" "sql_agent_layer" {
-  layer_name          = "sql_agent_layer"
+  layer_name          = "sql_agent_layer_${random_string.random.id}"
   compatible_runtimes = ["python3.12"]
   s3_bucket           = aws_s3_bucket.lambda_layers.bucket
   s3_key              = aws_s3_object.sql_agent_layer_zip.key
@@ -58,7 +58,7 @@ resource "aws_lambda_layer_version" "sql_agent_layer" {
 }
 
 resource "aws_lambda_layer_version" "scheduler_agent_layer" {
-  layer_name          = "scheduler_agent_layer"
+  layer_name          = "scheduler_agent_layer_${random_string.random.id}"
   compatible_runtimes = ["python3.13"]
   s3_bucket           = aws_s3_bucket.lambda_layers.bucket
   s3_key              = aws_s3_object.scheduler_agent_layer_zip.key
@@ -66,7 +66,7 @@ resource "aws_lambda_layer_version" "scheduler_agent_layer" {
 }
 
 resource "aws_lambda_layer_version" "search_agent_layer" {
-  layer_name          = "search_agent_layer"
+  layer_name          = "search_agent_layer_${random_string.random.id}"
   compatible_runtimes = ["python3.12"]
   s3_bucket           = aws_s3_bucket.lambda_layers.bucket
   s3_key              = aws_s3_object.search_agent_layer_zip.key
@@ -108,7 +108,7 @@ data "archive_file" "search_agent_lambda" {
 }
 
 resource "aws_lambda_function" "sql_agent" {
-  function_name = "sql_agent"
+  function_name = "sql_agent_${random_string.random.id}"
   role          = aws_iam_role.lambda_exec_role.arn
   handler       = "main.lambda_handler"
   runtime       = "python3.12"
@@ -139,11 +139,11 @@ resource "aws_cloudwatch_log_group" "lambda_log_group_sql_agent" {
 }
 
 resource "aws_sns_topic" "gameday_sns_topic" {
-  name = "gameday-sns-topic-new"
+  name = "gameday-sns-topic-new_${random_string.random.id}"
 }
 
 resource "aws_lambda_function" "scheduler_agent" {
-  function_name = "scheduler_agent"
+  function_name = "scheduler_agent_${random_string.random.id}"
   role          = aws_iam_role.lambda_exec_role.arn
   handler       = "lambda_function.lambda_handler"
   runtime       = "python3.13"
@@ -175,7 +175,7 @@ resource "aws_cloudwatch_log_group" "lambda_log_group_scheduler_agent" {
 }
 
 resource "aws_lambda_function" "search_agent" {
-  function_name = "search_agent"
+  function_name = "search_agent_${random_string.random.id}"
   role          = aws_iam_role.lambda_exec_role.arn
   handler       = "lambda_function.lambda_handler"
   runtime       = "python3.12"
@@ -192,7 +192,7 @@ resource "aws_lambda_function" "search_agent" {
       MONGO_HOST                 = replace(mongodbatlas_cluster.default.connection_strings.0.standard_srv, "mongodb+srv://", "")
       MONGO_USER                 = mongodbatlas_database_user.default.username
       MONGO_PASSWORD             = mongodbatlas_database_user.default.password
-      MONGO_URI_RAW                 = mongodbatlas_cluster.default.srv_address
+      MONGO_URI_RAW              = mongodbatlas_cluster.default.srv_address
       DB_NAME                    = "workplace_knowledgebase"
       COLLECTION_NAME            = "knowledge_collection"
       BOOTSTRAP_ENDPOINT         = confluent_kafka_cluster.default.bootstrap_endpoint

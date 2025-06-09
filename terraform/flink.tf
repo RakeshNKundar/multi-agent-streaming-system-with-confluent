@@ -12,7 +12,7 @@ resource "confluent_role_binding" "environment-admin" {
 }
 
 resource "confluent_flink_compute_pool" "default" {
-  display_name = "multi-agent-workplace-system_pool"
+  display_name = "multi-agent-workplace-system_pool_${random_string.random.id}"
   cloud        = "AWS"
   region       = data.aws_region.current.name
   max_cfu      = 50
@@ -22,7 +22,7 @@ resource "confluent_flink_compute_pool" "default" {
 }
 
 resource "confluent_api_key" "flink-default" {
-  display_name = "multi-agent-workplace-system-flink-api-key"
+  display_name = "multi-agent-workplace-system-flink-api-key-${random_string.random.id}"
   description  = "Flink API Key that is owned by default service account"
   owner {
     id          = confluent_service_account.default.id
