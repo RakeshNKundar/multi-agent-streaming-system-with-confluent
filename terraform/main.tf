@@ -39,15 +39,3 @@ data "confluent_ip_addresses" "default" {
   }
 }
 
-# resource "mongodbatlas_project_ip_access_list" "local" {
-#   project_id = data.mongodbatlas_project.default.id
-#   cidr_block = "${chomp(data.http.myip.response_body)}/32"
-#   comment    = "cidr block for local acc testing"
-# }
-
-# resource "mongodbatlas_project_ip_access_list" "confluent" {
-#   for_each   = { for ip in data.confluent_ip_addresses.default.ip_addresses : ip.ip_prefix => ip }
-#   project_id = data.mongodbatlas_project.default.id
-#   cidr_block = each.value.ip_prefix
-#   comment    = "cidr block for confluent acc testing"
-# }
