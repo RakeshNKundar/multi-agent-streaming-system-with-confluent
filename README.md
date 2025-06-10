@@ -10,7 +10,7 @@ This project demonstrates how to build an LLM-powered multi-agent system for wor
 
 - Querying company/employee data from SQL databases
 - Searching context from internal documents using embeddings
-- Executing tasks like scheduling and sending emails using automation agents
+- Executing tasks like schedulin and sending emails using automation agents
 
 Participants will walk away with hands-on experience building a production-grade GenAI application with real-time agent coordination.
 
@@ -141,16 +141,16 @@ This architecture includes:
     ./setup/init.sh
     ```
 
-## Task 01 – Orchestrator Agent (LLM-based Decision Making)
+## Task 1 – Orchestrator Agent (LLM-based Decision Making)
 
 1. Go to the AWS Console and navigate to the Amazon Bedrock service.
-2. On the left hand panel, click on the `Model Access` option
+1. On the left hand panel, click on the `Model Access` option
 
     ![alt text](assets/img/model_access.png)
-3. Click the `Modify Access` button
+1. Click the `Modify Access` button
 
     ![alt text](assets/img/modify_access.png)
-4. Enable the following models (it is strongly recommended to only enable these models or else enablement will stall and require AWS Support):
+1. Enable the following models (it is strongly recommended to only enable these models or else enablement will stall and require AWS Support):
     - Titan Embeddings G1 - Text
     - Claude 3 Sonnet
   
@@ -158,29 +158,9 @@ This architecture includes:
     ![alt text](assets/img/model_active.png)
     ![alt text](assets/img/model_active_2.png) 
   
-
 1. Login to your confluent cloud account to see the different resources deployed on your environment.
 
-2. In a different terminal, run:
-Login to confluent cloud
-```bash
-confluent login --save 
-```
-Select the environment id for the environment created on your account.
-```bash
-confluent env use --<YOUR_ENVIRONMENT_ID>
-```
-Create a FlinkSQL connection to connect to bedrock claude text model.Please replace your access keys and secrets & <env-id> before running the command.
-```bash
-confluent flink connection create bedrock-text-connection \
-  --cloud AWS \
-  --region us-east-1 \
-  --environment <env-id> \
-  --type bedrock \
-  --endpoint https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-sonnet-20240229-v1:0/invoke \
-  --aws-access-key <Replace with your own access key> \
-  --aws-secret-key <Replace with your own access secret >
-```
+1. Navigate to the Environment labeled `confluent_agentic_workshop`
 
 1. Once in the Environment view, click the Integrations tab and create a new Connection. 
 ![Creating a connection to Amazon Bedrock](assets/img/integration.png)
@@ -202,116 +182,121 @@ confluent flink connection create bedrock-text-connection \
 
     ![alt text](assets/img/flink_nav.png)
 
-```sql
-CREATE MODEL BedrockGeneralModel INPUT (text STRING) OUTPUT (response STRING) COMMENT 'General model with no system prompt.'
-WITH
-    (
-        'task' = 'text_generation',
-        'provider' = 'bedrock',
-        'bedrock.PARAMS.max_tokens' = '200000',
-        'bedrock.PARAMS.temperature' = '0.1',
-        'bedrock.connection' = 'bedrock-text-connection'
-    );
+1. Run following queries within the SQL workspace you've opened up:
 
-```
-Replace <message_field> value before running the command.
+    ```sql
+    CREATE MODEL BedrockGeneralModel INPUT (text STRING) OUTPUT (response STRING) COMMENT 'General model with no system prompt.'
+    WITH
+        (
+            'task' = 'text_generation',
+            'provider' = 'bedrock',
+            'bedrock.PARAMS.max_tokens' = '200000',
+            'bedrock.PARAMS.temperature' = '0.1',
+            'bedrock.connection' = 'bedrock-text-connection'
+        );
 
-```sql
-CREATE TABLE `orchestrator_metadata` AS 
-SELECT 
-    JSON_VALUE(response, '$.sql_agent') AS sql_agent,
-    JSON_VALUE(response, '$.sql_agent_metadata.query') AS sql_agent_query,
-    JSON_VALUE(response, '$.sql_agent_metadata.user_email') AS sql_agent_user_email,
-    JSON_VALUE(response, '$.sql_agent_metadata.employee_id') AS sql_agent_employee_id,
+    ```
 
-    JSON_VALUE(response, '$.search_agent') AS search_agent,
-    JSON_VALUE(response, '$.search_agent_metadata.query') AS search_agent_query,
 
-    JSON_VALUE(response, '$.scheduler_agent') AS scheduler_agent,
-    JSON_VALUE(response, '$.scheduler_agent_metadata.title') AS scheduler_title,
-    JSON_VALUE(response, '$.scheduler_agent_metadata.description') AS scheduler_description,
-    JSON_VALUE(response, '$.scheduler_agent_metadata.location') AS scheduler_location,
-    JSON_VALUE(response, '$.scheduler_agent_metadata.start') AS scheduler_start,
-    JSON_VALUE(response, '$.scheduler_agent_metadata.end') AS scheduler_end,
-    JSON_QUERY(response, '$.scheduler_agent_metadata.attendees') AS scheduler_attendees,
-    JSON_QUERY(response, '$.sequence') AS execution_sequence,`timestamp`,
-message_id,user_email,session_id,employee_id,message
-FROM 
-    queries ,
-LATERAL TABLE(
-    ML_PREDICT(
-        'BedrockGeneralModel',(
-            'You are a query router for a multi-agent workplace assistant.
+    ```sql
+    CREATE TABLE `orchestrator_metadata` AS 
+    SELECT 
+        JSON_VALUE(response, '$.sql_agent') AS sql_agent,
+        JSON_VALUE(response, '$.sql_agent_metadata.query') AS sql_agent_query,
+        JSON_VALUE(response, '$.sql_agent_metadata.user_email') AS sql_agent_user_email,
+        JSON_VALUE(response, '$.sql_agent_metadata.employee_id') AS sql_agent_employee_id,
 
-Given the user input, extract:
+        JSON_VALUE(response, '$.search_agent') AS search_agent,
+        JSON_VALUE(response, '$.search_agent_metadata.query') AS search_agent_query,
 
-1. Which agents are required
-2. A relevant fragment of the query for each agent — do not copy the full query unless necessary
-3. Agent-specific metadata in structured JSON
-4. An execution sequence, if applicable.
+        JSON_VALUE(response, '$.scheduler_agent') AS scheduler_agent,
+        JSON_VALUE(response, '$.scheduler_agent_metadata.title') AS scheduler_title,
+        JSON_VALUE(response, '$.scheduler_agent_metadata.description') AS scheduler_description,
+        JSON_VALUE(response, '$.scheduler_agent_metadata.location') AS scheduler_location,
+        JSON_VALUE(response, '$.scheduler_agent_metadata.start') AS scheduler_start,
+        JSON_VALUE(response, '$.scheduler_agent_metadata.end') AS scheduler_end,
+        JSON_QUERY(response, '$.scheduler_agent_metadata.attendees') AS scheduler_attendees,
+        JSON_QUERY(response, '$.sequence') AS execution_sequence,`timestamp`,
+    message_id,user_email,session_id,employee_id,message
+    FROM 
+        queries ,
+    LATERAL TABLE(
+        ML_PREDICT(
+            'BedrockGeneralModel',(
+                'You are a query router for a multi-agent workplace assistant.
 
-Descriptions of agents:
+    Given the user input, extract:
 
-* sql\_agent: Handles employee- or department-level data queries from SQL using employee\_id or user\_email.
-* search\_agent: Retrieves top documents or policies using vector search based on semantic meaning.
-* scheduler\_agent: Schedules meetings or creates events using provided attendees, title, and time.
+    1. Which agents are required
+    2. A relevant fragment of the query for each agent — do not copy the full query unless necessary
+    3. Agent-specific metadata in structured JSON
+    4. An execution sequence, if applicable.
 
-Return the result in strict JSON using this structure:
+    Descriptions of agents:
 
-{
-  "sql_agent": true | false,
-  "sql_agent_metadata": {
-    "query": "<original message from user>",
-    "user_email": "<original user_email>",
-    "employee_id": "<original employee_id>"
-  },
+    * sql\_agent: Handles employee- or department-level data queries from SQL using employee\_id or user\_email.
+    * search\_agent: Retrieves top documents or policies using vector search based on semantic meaning.
+    * scheduler\_agent: Schedules meetings or creates events using provided attendees, title, and time.
 
-  "search_agent": true | false,
-  "search_agent_metadata": {
-    "query": "<original message from user>"
-  },
+    Return the result in strict JSON using this structure:
 
-  "scheduler_agent": true | false,
-  "scheduler_agent_metadata": {
-    "title": "Meeting Title",
-    "description": "Purpose of the meeting",
-    "location": "Virtual",
-    "start": "2025-05-06T15:00:00Z",
-    "end": "2025-05-06T16:00:00Z",
-    "attendees": ["<user_email or mentioned email>"]
-  },
+    {
+      "sql_agent": true | false,
+      "sql_agent_metadata": {
+        "query": "<original message from user>",
+        "user_email": "<original user_email>",
+        "employee_id": "<original employee_id>"
+      },
 
-  "sequence": ["scheduler_agent", "search_agent", "sql_agent"]
-}
+      "search_agent": true | false,
+      "search_agent_metadata": {
+        "query": "<original message from user>"
+      },
 
-  
-' || '\n User prompt: ' ||
-            '{
-   message_id: ' || message_id || ','
-  'employee_id: '||  employee_id || ','
-  'user_email:' || user_email || ','
-  'message:'|| <message_field> || '}'
+      "scheduler_agent": true | false,
+      "scheduler_agent_metadata": {
+        "title": "Meeting Title",
+        "description": "Purpose of the meeting",
+        "location": "Virtual",
+        "start": "2025-05-06T15:00:00Z",
+        "end": "2025-05-06T16:00:00Z",
+        "attendees": ["<user_email or mentioned email>"]
+      },
+
+      "sequence": ["scheduler_agent", "search_agent", "sql_agent"]
+    }
+
+      
+    ' || '\n User prompt: ' ||
+                '{
+      message_id: ' || message_id || ','
+      'employee_id: '||  employee_id || ','
+      'user_email:' || user_email || ','
+      'message:'|| message || '}'
+            )
         )
-    )
-);
-```
+    );
+    ```
 
-5. Insert a sample query in the `queries` topic to test out our flink agent. 
+1. Navigate to the Topics tab and find the `queries` topic. ![alt text](assets/img/queries_topic.png)
 
-```json
-{
-  "message_id": "d7a97c0a-8e5b-4c65-90cb-7ea5934ae6d4",
-  "employee_id": "E001",
-  "user_email": "john.smith@company.com",
-  "session_id": "sess-01",
-  "message": "What is company's maternal leave policy? How much am I eligible for ?",
-  "timestamp": 1746717000000
-}
-```
+1. Insert a sample query in the `queries` topic to test out our flink agent. 
 
-5. Verify the data in the respective topics - **queries** and **orchestrator_metadata**. 
+    ```json
+    {
+      "message_id": "d7a97c0a-8e5b-4c65-90cb-7ea5934ae6d4",
+      "employee_id": "E001",
+      "user_email": "john.smith@company.com",
+      "session_id": "sess-01",
+      "message": "What is company's maternal leave policy? How much am I eligible for ?",
+      "timestamp": 1746717000000
+    }
+    ```
+    ![alt text](assets/img/produce.png)
 
-6. Take a look at the agent flags and observe which are true for the input we have given.
+5. Verify the data exists in the respective topics - **queries** and **orchestrator_metadata**. 
+
+6. Click the record in the `orchestrator_metadata` topic to view the field values. Take a look at the agent flags and observe which are true for the input we have given. ![alt text](assets/img/message_check.png)
 
 7. Try It Yourself ✏️:
     1. How would you change the prompt to include the SQL agent for being called?
@@ -344,7 +329,7 @@ SELECT
     session_id , 
     `timestamp`
 FROM orchestrator_metadata 
-where <Enter the condition here>; 
+where sql_agent='true'; 
 ```
 
 🔹 Search Agent (Vector)
@@ -362,7 +347,7 @@ SELECT
     session_id , 
     `timestamp`
 FROM orchestrator_metadata 
-where <Enter the condition here>; 
+where search_agent='true';
 ```
 
 🔹 Scheduler Agent
@@ -387,7 +372,7 @@ SELECT
   REGEXP_REPLACE(scheduler_attendees, '\\["|\\"]', ''), '","'
 ) AS attendees
 FROM orchestrator_metadata
-WHERE <Enter the condition here>; 
+WHERE scheduler_agent = 'true';
 ```
 Verify the data in the respective topics - **sql_agent_input**, **search_agent_v2** and **scheduler_agent_input**.If any of these topics are empty, it likely means you haven’t triggered a user query that would activate the corresponding agent.
 
@@ -444,160 +429,22 @@ Before creating the connector, make sure the Lambda is properly configured.
 - Add below enviorment variable values: 
 
 ```bash
-sql_agent_result_topic=sql_agent_response
+BOOTSTRAP_ENDPOINT=<your-confluent-bootstrap-endpoint>
+KAFKA_API_KEY=<your-kafka-api-key>
+KAFKA_API_SECRET=<your-kafka-api-secret>
+SCHEMA_REGISTRY_API_KEY=<your-schema-registry-api-key>
+SCHEMA_REGISTRY_API_SECRET=<your-schema-registry-api-secret>
+SCHEMA_REGISTRY_ENDPOINT=https://<your-schema-registry-endpoint>
+TOPIC_NAME=sql_agent_response
 ```
-
-Once your Lambda is ready, proceed to configure the Confluent-managed Kafka Sink Connector to invoke this function on every message received in sql_agent_input.
-
-Step-by-step Setup for Connector:
-1. Go to Confluent Cloud > Connectors.
-
-2. Select AWS Lambda Sink Connector from the available connectors.
-
-3. Fill in the relevant configuration details below and deploy the connector.
-```json
-{
-  "config": {
-    "topics": "sql_agent_input",
-    "schema.context.name": "default",
-    "input.data.format": "AVRO",
-    "connector.class": "LambdaSink",
-    "name": "SqlAgentSink",
-    "kafka.auth.mode": "KAFKA_API_KEY",
-    "kafka.api.key": "<YOUR_KAFKA_API_KEY>",
-    "kafka.api.secret": "****************************************************************",
-    "authentication.method": "Access Keys",
-    "aws.access.key.id": "********************",
-    "aws.secret.access.key": "****************************************",
-    "aws.lambda.configuration.mode": "single",
-    "aws.lambda.function.name": "sql_agent",
-    "aws.lambda.invocation.type": "sync",
-    "aws.lambda.batch.size": "20",
-    "record.converter.class": "JsonKeyValueConverter",
-    "aws.lambda.socket.timeout": "50000",
-    "behavior.on.error": "log",
-    "max.poll.interval.ms": "300000",
-    "max.poll.records": "500",
-    "tasks.max": "1",
-    "auto.restart.on.user.error": "true",
-    "value.converter.decimal.format": "BASE64",
-    "value.converter.reference.subject.name.strategy": "DefaultReferenceSubjectNameStrategy",
-    "value.converter.value.subject.name.strategy": "TopicNameStrategy",
-    "key.converter.key.subject.name.strategy": "TopicNameStrategy"
-  }
-}
-```
+Create a Lambda IAM Assume Role Integration
+1. Navigate to the Integrations tab of your environment and click Add Integration. ![alt text](assets/img/assume_role_integration.png)
+1. Select `New role`
+1. Select the `Lambda Sink` option and follow the rest of the integration set up as instructed. When instructed, provide a simple name such as `lambda iam assume role` for the integration.
+![alt text](assets/img/lambda_select.png)
 
 
-## Task 4: Context Retrieval via Vector Search 
-We now add intelligence to our Research Agent using Amazon Bedrock embeddings + MongoDB vector search.
-
-1. Create a FlinkSQL connection to connect to bedrock text embedding model.Please replac your own keys before running the command.
-```bash
-confluent flink connection create bedrock-embedding-connection \
-  --cloud AWS \
-  --region 	us-east-1 \
-  --environment <env-id> \
-  --type bedrock \
-  --endpoint https://bedrock-runtime.us-east-1.amazonaws.com/model/amazon.titan-embed-text-v1/invoke \
-  --aws-access-key <Replace with your own access key> \
-  --aws-secret-key <Replace with your own access secret >
-```
-
-
-Log in to your confluent cloud env and access flink workspace(UI tool to run your flinksql queries) to run following queries:
-
-2. Create Bedrock Model in Flink SQL
-```sql
-CREATE MODEL bedrock_embed
-INPUT (text STRING)
-OUTPUT (response ARRAY<FLOAT>)
-WITH (
-  'bedrock.connection'='bedrock-embedding-connection',
-  'bedrock.input_format'='AMAZON-TITAN-EMBED',
-  'provider'='bedrock',
-  'task'='embedding'
-);
-```
-
-3. Embed User Queries
-```sql
-CREATE TABLE search_embeddings AS 
-SELECT CAST(message_id AS BYTES) as key,`response` as query_embedding, query ,message_id ,employee_id ,user_email,message,session_id ,`timestamp` from `search_agent_input`, 
-LATERAL TABLE(
-    ML_PREDICT(
-        'bedrock_embed',(
-            'queryFromEmployee: ' || query 
-        )
-    )
-);
-```
-4. This task helps you build a fully managed Lambda Kafka Sink Connector that routes your queries to a Search lambda agent , similar to how we did it for a sql agent.
-Goal: Stream search_embeddings Kafka topic data directly to your AWS Lambda.
-Before creating the connector, make sure the Lambda is properly configured.
-- Open the AWS Console.
-- Search for and open your Lambda function (e.g., sql_agent).
-- Add the following environment variables to the function:
-- Add below enviorment variable values: 
-
-```bash
-search_agent_result_topic=search_agent_response
-```
-Once your Lambda is ready, proceed to configure the Confluent-managed Kafka Sink Connector to invoke this function on every message received in search_embeddings.
-
-Step-by-step Setup for Connector:
-  1. Go to Confluent Cloud > Connectors.
-
-  2. Select AWS Lambda Sink Connector from the available connectors.
-
-  3. Fill in the relevant configuration details below and deploy the connector.
-  ```json
-  {
-  "config": {
-    "topics": "search_embeddings",
-    "schema.context.name": "default",
-    "input.data.format": "AVRO",
-    "connector.class": "LambdaSink",
-    "name": "SearchAgent_Sink",
-    "kafka.auth.mode": "KAFKA_API_KEY",
-    "kafka.api.key": "<YOUR_KAFKA_API_KEY>",
-    "kafka.api.secret": "****************************************************************",
-    "authentication.method": "Access Keys",
-    "aws.access.key.id": "********************",
-    "aws.secret.access.key": "****************************************",
-    "aws.lambda.configuration.mode": "single",
-    "aws.lambda.function.name": "search_agent",
-    "aws.lambda.invocation.type": "sync",
-    "aws.lambda.batch.size": "20",
-    "record.converter.class": "JsonKeyValueConverter",
-    "aws.lambda.socket.timeout": "50000",
-    "behavior.on.error": "log",
-    "max.poll.interval.ms": "300000",
-    "max.poll.records": "500",
-    "tasks.max": "1",
-    "auto.restart.on.user.error": "true",
-    "value.converter.decimal.format": "BASE64",
-    "value.converter.reference.subject.name.strategy": "DefaultReferenceSubjectNameStrategy",
-    "value.converter.value.subject.name.strategy": "TopicNameStrategy",
-    "key.converter.key.subject.name.strategy": "TopicNameStrategy"
-  }
-  }
-  ``` 
-
-## Task 5: Integrate Scheduler Agent with Lambda Sink Connector
-This task helps you build a fully managed Lambda Kafka Sink Connector that routes your queries to a Scheduler lambda agent , similar to how we did it for a sql agent.
-Goal:
-Stream scheduler_agent_input Kafka topic data directly to your AWS Lambda.
-
-Before creating the connector, make sure the Lambda is properly configured.
-- Open the AWS Console.
-- Search for and open your Lambda function (e.g., scheduler_agent).
-- Add the following environment variables to the function:
-- Add below enviorment variable values: 
-
-```bash
-scheduler_agent_result_topic=scheduler_agent_response
-```
+With your Lambda is ready and your IAM Assume Role Integration created, proceed to configure the Confluent-managed Kafka Sink Connector to invoke this function on every message received in sql_agent_input.
 
 Step-by-step Setup:
 1. Go to Confluent Cloud > Connectors.
@@ -693,39 +540,6 @@ Stream scheduler_agent_input Kafka topic data directly to your AWS Lambda.
       - Connector name: SchedulerAgentSink
 
 
-3. Fill in the relevant configuration details below and deploy the connector.
-```json
-{
-  "config": {
-    "topics": "scheduler_agent_input",
-    "schema.context.name": "default",
-    "input.data.format": "AVRO",
-    "connector.class": "LambdaSink",
-    "name": "SchedulerAgentSink",
-    "kafka.auth.mode": "KAFKA_API_KEY",
-    "kafka.api.key": "<YOUR_KAFKA_API_KEY>",
-    "kafka.api.secret": "****************************************************************",
-    "authentication.method": "Access Keys",
-    "aws.access.key.id": "********************",
-    "aws.secret.access.key": "****************************************",
-    "aws.lambda.configuration.mode": "single",
-    "aws.lambda.function.name": "scheduler_agent",
-    "aws.lambda.invocation.type": "sync",
-    "aws.lambda.batch.size": "20",
-    "record.converter.class": "JsonKeyValueConverter",
-    "aws.lambda.socket.timeout": "50000",
-    "behavior.on.error": "log",
-    "max.poll.interval.ms": "300000",
-    "max.poll.records": "500",
-    "tasks.max": "1",
-    "auto.restart.on.user.error": "true",
-    "value.converter.decimal.format": "BASE64",
-    "value.converter.reference.subject.name.strategy": "DefaultReferenceSubjectNameStrategy",
-    "value.converter.value.subject.name.strategy": "TopicNameStrategy",
-    "key.converter.key.subject.name.strategy": "TopicNameStrategy"
-  }
-}
-```
 ## Task 06 (Optional) – Integrating Email service with Scheduler agent using AWS SNS
 You can send email notifications to about the meeting from the scheduler agent using AWS SNS service. The Scheduler agent pushes events to the SNS service. You can create an E-mail subscription out of the SNS topic using your email address to receive email notification.
 
