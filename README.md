@@ -168,7 +168,7 @@ This architecture includes:
 1. Select Amazon Bedrock as the service with which to create a connection. ![alt text](assets/img/service_select.png)
 
 1. Fill out the form using following:
-    - Endpoint: `https://bedrock-runtime.<your_region>.amazonaws.com/model/anthropic.claude-3-sonnet-20240229-v1:0/invoke`
+    - Endpoint: `https://bedrock-runtime.<your_region>.amazonaws.com/model/anthropic.claude-3-5-haiku-20241022-v1:0/invoke`
     - aws access key - <Replace_with_your_own_access_key> 
     - aws secret key  - <Replace_with_your_own_access_secret_key>
     - aws session token - <Replace_with_your_own_session_token>
@@ -386,7 +386,7 @@ Create a few test queries that would intentionally route to each of these agents
   "employee_id": "E001",
   "user_email": "john.smith@company.com",
   "session_id": "sess-01",
-  "message": "How many people are in the engineering department?",
+  "message": "How many employees are based in North America like me?",
   "timestamp": 1746717000000
 }
 ```
@@ -404,13 +404,14 @@ Create a few test queries that would intentionally route to each of these agents
 ```
 
 "Schedule a skip-level meeting with my manager next week" → Scheduler Agent
+*Don’t forget to add your own email address so you receive the necessary notifications during the workshop.*
 ```json
 {
   "message_id": "9f0e8192-9a14-49a7-9a22-6fc324d7ddghe",
   "employee_id": "E001",
   "user_email": "john.smith@company.com",
   "session_id": "sess-01",
-  "message": "Schedule a skip-level meeting with my manager  <your_email_id> next week",
+  "message": "Schedule a skip-level meeting with my manager <your_email_id> next week",
   "timestamp": 1746717000000
 }
 ```
