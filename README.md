@@ -48,6 +48,7 @@ This architecture includes:
     - [Terraform CLI](https://developer.hashicorp.com/terraform/install)
     - [Confluent Cloud CLI](https://docs.confluent.io/confluent-cli/current/install.html)
     - [MongoDB Database Tools](https://www.mongodb.com/docs/database-tools/installation/)
+    
 
 - **Access:** 
     1. MongoDB Atlas Account Access - https://www.mongodb.com/
@@ -152,7 +153,7 @@ This architecture includes:
     ![alt text](assets/img/modify_access.png)
 1. Enable the following models (it is strongly recommended to only enable these models or else enablement will stall and require AWS Support):
     - Titan Embeddings G1 - Text
-    - Claude 3 Sonnet
+    - Claude 3.5 Haiku
   
     It should only take 1-5 minutes for the models to enable. You will see the following when models are ready.
     ![alt text](assets/img/model_active.png)
@@ -379,7 +380,7 @@ Verify the data in the respective topics - **sql_agent_input**, **search_agent_v
 👉 Next Step:
 Create a few test queries that would intentionally route to each of these agents. For example:
 
-"How many people are in the engineering team?" → SQL Agent
+"How many employees are based in North America like me?" → SQL Agent
 ```json
 {
   "message_id": "6f0e8192-9a14-49a7-9a22-6fc324d7d4co",
@@ -398,7 +399,7 @@ Create a few test queries that would intentionally route to each of these agents
   "employee_id": "E001",
   "user_email": "john.smith@company.com",
   "session_id": "sess-01",
-  "message": "Can you help me understand hybrid Compensation & performance structure ?",
+  "message": "How do skill premiums work with the overall compensation structure?",
   "timestamp": 1746717000000
 }
 ```
@@ -426,8 +427,7 @@ Stream sql_agent_input Kafka topic data directly to your AWS Lambda.
 Before creating the connector, make sure the Lambda is properly configured.
 - Open the AWS Console.
 - Search for and open your Lambda function (e.g., sql_agent).
-- Add the following environment variables to the function:
-- Add below enviorment variable values: 
+- Validate the following environment variables to the function: 
 
 ```bash
 BOOTSTRAP_ENDPOINT=<your-confluent-bootstrap-endpoint>
@@ -455,7 +455,7 @@ Step-by-step Setup:
 
 3. Select the `sql_agent_input` topic. Each time a record lands in this topic, the Lambda function will get triggered. ![alt text](assets/img/topic_select.png)
 
-1. During the authentication part, be sure you point this connector to the `sql_agent` Lambda function and that you use the `IAM Roles` as the authentication method. The `Provider Integration` you created earlier is what you select last.
+1. During the authentication part, be sure you point this connector to the `sql_agent_<>` Lambda function and that you use the `IAM Roles` as the authentication method. The `Provider Integration` you created earlier is what you select last.
 
     ![alt text](assets/img/use_integration.png)
 
@@ -591,19 +591,19 @@ SELECT
   o.message,
   CASE 
         WHEN o.sql_agent = 'true' 
-         AND s.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '5' HOUR 
+         AND s.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '2' HOUR 
         THEN s.sql_result 
         ELSE NULL 
       END AS employee_info,
   CASE 
         WHEN o.search_agent = 'true' 
-         AND c.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '5' HOUR 
+         AND c.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '2' HOUR 
         THEN c.`search_result_summary` 
         ELSE NULL 
       END AS additional_context,
   CASE 
         WHEN o.scheduler_agent = 'true' 
-         AND sch.`$rowtime` BETWEEN sch.`$rowtime` - INTERVAL '5' MINUTE AND sch.`$rowtime` + INTERVAL '5' HOUR 
+         AND sch.`$rowtime` BETWEEN sch.`$rowtime` - INTERVAL '5' MINUTE AND sch.`$rowtime` + INTERVAL '2' HOUR 
         THEN sch.`title`
         ELSE NULL 
       END AS meeting_title
@@ -611,13 +611,13 @@ SELECT
 FROM orchestrator_metadata o , sql_agent_response s ,search_agent_response c ,scheduler_agent_response sch
   where o.message_id = s.message_id
   AND o.sql_agent = 'true'
-  AND s.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '5' HOUR
+  AND s.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '2' HOUR
   OR ( o.message_id = c.message_id
   AND o.search_agent = 'true'
-  AND c.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '5' HOUR )
+  AND c.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '2' HOUR )
   OR ( o.message_id = sch.message_id
   AND o.scheduler_agent = 'true'
-  AND sch.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '5' HOUR) ;
+  AND sch.`$rowtime` BETWEEN o.`$rowtime` - INTERVAL '5' MINUTE AND o.`$rowtime` + INTERVAL '2' HOUR) ;
   ```
 🔹 Step 2: Filter Latest Version per Message
 
@@ -689,14 +689,55 @@ LATERAL TABLE(
   )
  );
 ```
+### 🔄 Testing Agent Responses & Accelerating Watermark Progression
+If you're not seeing responses in the final joined topic or the watermark is lagging, feel free to add more messages to the input Kafka topic. This helps push the watermark forward, ensuring downstream Flink operators are triggered appropriately.
+
+Below are some sample messages. You can copy and publish them directly to your `queries` topic.
+
+"Can I extend coverage of my healthcare benefits to family members?" → SQL Agent
+```json
+{
+  "message_id": "6f0e8192-9a14-49a7-9a22-6fc324d7d4co",
+  "employee_id": "E002",
+  "user_email": "john.smith@company.com",
+  "session_id": "sess-01",
+  "message": "Can I extend coverage of my healthcare benefits to family members?",
+  "timestamp": 1746717000000
+}
+```
+
+"Can you tell me when is the my next public holiday based on my country ?" → Sql & Search Agent
+```json
+{
+  "message_id": "8f0e8192-9a14-49a7-9a22-6fc324d7d4ci",
+  "employee_id": "E002",
+  "user_email": "john.smith@company.com",
+  "session_id": "sess-01",
+  "message": "Can you tell me when is the my next public holiday based on my country ?",
+  "timestamp": 1746717000000
+}
+```
+
+"Schedule a meeting." → Scheduler Agent
+*Don’t forget to add your own email address so you receive the necessary notifications during the workshop.*
+```json
+{
+  "message_id": "9f0e8192-9a14-49a7-9a22-6fc324d7ddghe",
+  "employee_id": "E003",
+  "user_email": "john.smith@company.com",
+  "session_id": "sess-01",
+  "message": "Can you schedule a meeting with my manager <your_email_id> to discuss what happens to my benefits during my upcoming international assignment? Also, can you pull a summary report on this?",
+  "timestamp": 1746717000000
+}
+```
+
 
 ✅ Example Output
 If a user asked:
-"Can you schedule a 30-minute meeting with Alice and show me her department's last month performance?"
+"Can you schedule a meeting with my manager at to discuss what happens to my benefits during my upcoming international assignment? Also, can you pull a summary report on this?"
 
-And all agents responded, the final result might be:
-
-"I've scheduled a 30-minute meeting titled 'Project Discussion' with Alice at 3 PM tomorrow. Her department's performance for last month shows a 12% increase in output. I've also attached a document detailing her recent projects."
+✅ Example Output:
+"I've scheduled a 45-minute meeting titled 'International Assignment – Benefits Discussion' with your manager at for 10 AM this Thursday. I've also pulled a summary report highlighting changes to healthcare, retirement contributions, and relocation allowances during international assignments. The report is attached for your review."
 
 ## End of Workshop.
 
@@ -705,10 +746,32 @@ And all agents responded, the final result might be:
 
 - Click on your organization name in the top left corner.
 
-- Select the "Environments" tab.
+- Select the "Environments" tab and click on your cluster.
 
-- Click on the environment ,click `delete environment` button on the right side.
+- Select one of three Lambda Connectors we deployed and scroll down to the bottom.
 
 - Choose "Delete".
-![Delete Resources Diagram](assets/img/destroy.png)
+![Delete Resources Diagram](assets/img/delete_connector.png)
 
+- Similarly "Delete" all three connectors.
+
+- Navigate to <b>setup/teardown.sh</b> and edit the following:
+
+    ```bash
+    # setup/init.sh
+
+    export TF_VAR_cc_cloud_api_key="<Confluent Cloud API Key>"
+    export TF_VAR_cc_cloud_api_secret="<Confluent Cloud API Secret>"
+    export TF_VAR_mongodbatlas_public_key="<MongoDB Public API Key>"
+    export TF_VAR_mongodbatlas_private_key="<MongoDB Private API Key>"
+    export AWS_DEFAULT_REGION="us-west-2" #If using a Confluent-provided AWS account, make sure this region matches the region found in the above steps (most likely it will be us-west-2)
+    export AWS_ACCESS_KEY_ID="<AWS Access Key ID"
+    export AWS_SECRET_ACCESS_KEY="<AWS Access Key Secret>"
+    export AWS_SESSION_TOKEN="<AWS Session Token>" #Only necessary if you are using a Confluent-provided AWS account or using the temporary credentials from your personal AWS account.
+    ```
+-  After Setting the variables, run:
+
+    ```bash
+    chmod +x ./setup/teardown.sh
+    ./setup/teardown.sh
+    ```
