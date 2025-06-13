@@ -44,7 +44,7 @@ This architecture includes:
 
 ## Requirements
 - **Local Software Requirements:** 
-    - Python3 > 3.9
+    - [Python3 > 3.9](https://www.python.org/downloads/)
     - [Terraform CLI](https://developer.hashicorp.com/terraform/install)
     - [Confluent Cloud CLI](https://docs.confluent.io/confluent-cli/current/install.html)
     - [MongoDB Database Tools](https://www.mongodb.com/docs/database-tools/installation/)
@@ -83,7 +83,8 @@ This architecture includes:
 
 1. ### Create a Confluent Cloud API Key
     Create Confluent Cloud API Key for your confluent cloud account with resource scope as Cloud resource management.
-    - Go to https://confluent.cloud/settings/api-keys 
+    - Go to https://confluent.cloud/settings/api-keys
+    - Click on My Account (Make sure you have Organization Admin RBAC role)
     - Add API Key 
     - Cloud resource management 
     - Download API Key 
@@ -95,7 +96,7 @@ This architecture includes:
     Create MongoDB Programmatic Access api key for your mongo account - https://www.mongodb.com/docs/atlas/configure-api-access-org/
     * In Atlas, go to the Organization Access Manager page.
     * Click the Applications tab
-    * Click on Create API Key with Organization Owner Permissions
+    * Choose API Keys and Click on Create API Key with Organization Owner Permissions
     * Save the API Key for further use.
       <p><img src="assets/img/apikeymongo.png" alt="nim" width="300" /></p>
 
@@ -169,7 +170,7 @@ This architecture includes:
 1. Select Amazon Bedrock as the service with which to create a connection. ![alt text](assets/img/service_select.png)
 
 1. Fill out the form using following:
-    - Endpoint: `https://bedrock-runtime.<your_region>.amazonaws.com/model/anthropic.claude-3-5-haiku-20241022-v1:0/invoke`
+    - Endpoint: `https://bedrock-runtime.<your_region>.amazonaws.com/model/us.anthropic.claude-3-5-haiku-20241022-v1:0/invoke`
     - aws access key - <Replace_with_your_own_access_key> 
     - aws secret key  - <Replace_with_your_own_access_secret_key>
     - aws session token - <Replace_with_your_own_session_token>
