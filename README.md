@@ -114,11 +114,11 @@ This architecture includes:
 
       ![alt text](assets/img/get_keys.png)
       ![alt text](assets/img/ws_keys.png) <br>
-**Note:** Please use **US-WEST-2** region for this workshop as some LLM models used in this workshop might not have the same functionalities in other regions.
+<br> **⚠️ NOTE:** Please use **US-WEST-2** region for this workshop as some LLM models used in this workshop might not have the same functionalities in other regions.
 
 1. ### [Alternative] Retrieve your AWS Access Keys from an AWS account you provide
     In the event an AWS account is not provided to you for this workshop, you can use your own AWS account. When doing so you can deploy the upcoming Terraform script using [IAM Access Keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html) or the [AWS CLI Profile](https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-options.html) (ex. `aws configure --profile <profilename>`). <br><br>
-    **Note:** Please use **US-WEST-2** region for this workshop as some LLM models used in this workshop might not have the same functionalities in other regions. 
+    **⚠️ NOTE:** Please use **US-WEST-2** region for this workshop as some LLM models used in this workshop might not have the same functionalities in other regions. 
 
    
 
@@ -144,7 +144,7 @@ This architecture includes:
     chmod +x ./setup/init.sh
     ./setup/init.sh
     ```
-    **Note:** Terraform would take around 5 minutes to provision the infrastructure.
+    **⚠️ NOTE:** Terraform would take around 5 minutes to provision the infrastructure.
   
 
 ## Task 1 – Orchestrator Agent (LLM-based Decision Making)
@@ -449,7 +449,7 @@ Create a Lambda IAM Assume Role Integration
 1. Select the `Lambda Sink` option and follow the rest of the integration set up as instructed. When instructed, provide a simple name such as `lambda iam assume role` for the integration.
 ![alt text](assets/img/lambda_select.png)
 
-<br> **Note** : In the permission-policy.json file make sure to include the AWS lambda function's ARN of all 3 agents(sql_agent, search_agent, schedule_agent) under resource block to allow lambda sink connectors to reuse the same IAM role.
+<br> **⚠️ NOTE** : In the permission-policy.json file make sure to include the AWS lambda function's ARN of all 3 agents(sql_agent, search_agent, schedule_agent) under resource block to allow lambda sink connectors to reuse the same IAM role.
 
 With your Lambda is ready and your IAM Assume Role Integration created, proceed to configure the Confluent-managed Kafka Sink Connector to invoke this function on every message received in sql_agent_input.
 
