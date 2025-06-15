@@ -113,10 +113,12 @@ This architecture includes:
     * The other link provides the necessary access keys and session token to deploy resources into your Confluent-provided AWS account using Terraform. Copy and paste these values in a .txt file. You will uses these values multiple times throughout the workshop.
 
       ![alt text](assets/img/get_keys.png)
-      ![alt text](assets/img/ws_keys.png)
+      ![alt text](assets/img/ws_keys.png) <br>
+<br> **⚠️ NOTE:** Please use **US-WEST-2** region for this workshop as some LLM models used in this workshop might not have the same functionalities in other regions.
 
 1. ### [Alternative] Retrieve your AWS Access Keys from an AWS account you provide
-    In the event an AWS account is not provided to you for this workshop, you can use your own AWS account. When doing so you can deploy the upcoming Terraform script using [IAM Access Keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html) or the [AWS CLI Profile](https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-options.html) (ex. `aws configure --profile <profilename>`). 
+    In the event an AWS account is not provided to you for this workshop, you can use your own AWS account. When doing so you can deploy the upcoming Terraform script using [IAM Access Keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html) or the [AWS CLI Profile](https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-options.html) (ex. `aws configure --profile <profilename>`). <br><br>
+    **⚠️ NOTE:** Please use **US-WEST-2** region for this workshop as some LLM models used in this workshop might not have the same functionalities in other regions. 
 
    
 
@@ -142,6 +144,8 @@ This architecture includes:
     chmod +x ./setup/init.sh
     ./setup/init.sh
     ```
+    **⚠️ NOTE:** Terraform would take around 5 minutes to provision the infrastructure.
+  
 
 ## Task 1 – Orchestrator Agent (LLM-based Decision Making)
 
@@ -170,7 +174,7 @@ This architecture includes:
 1. Select Amazon Bedrock as the service with which to create a connection. ![alt text](assets/img/service_select.png)
 
 1. Fill out the form using following:
-    - Endpoint: `https://bedrock-runtime.<your_region>.amazonaws.com/model/us.anthropic.claude-3-5-haiku-20241022-v1:0/invoke`
+    - Endpoint: `https://bedrock-runtime.<your_region>.amazonaws.com/model/anthropic.claude-3-5-haiku-20241022-v1:0/invoke`
     - aws access key - <Replace_with_your_own_access_key> 
     - aws secret key  - <Replace_with_your_own_access_secret_key>
     - aws session token - <Replace_with_your_own_session_token>
@@ -307,10 +311,10 @@ This architecture includes:
 
 ## Task 2: Setup the Workflow distribution 
 Now that the Orchestrator Agent is up and running, it's time to activate the specialized agents that perform actual tasks.🧩 Concept Recap
-Each agent is an independent component in the system. Here's a quick breakdown:
-🗄 SQL Agent: Retrieves employee or department-level data using employee_id or user_email from a SQL database.
-🔎 Vector Search Agent: Uses semantic embeddings to retrieve contextually relevant documents from a MongoDB Vector Store.
-📅 Scheduler Agent: Automates meeting scheduling using structured metadata like title, time, and attendees.
+Each agent is an independent component in the system. Here's a quick breakdown:<br>
+🗄 SQL Agent: Retrieves employee or department-level data using employee_id or user_email from a SQL database.<br>
+🔎 Vector Search Agent: Uses semantic embeddings to retrieve contextually relevant documents from a MongoDB Vector Store.<br>
+📅 Scheduler Agent: Automates meeting scheduling using structured metadata like title, time, and attendees.<br>
 
 These agents listen on their respective Kafka input topics and output results to their own response topics (e.g., sql_agent_response, search_agent_response, scheduler_result).
 
@@ -445,6 +449,7 @@ Create a Lambda IAM Assume Role Integration
 1. Select the `Lambda Sink` option and follow the rest of the integration set up as instructed. When instructed, provide a simple name such as `lambda iam assume role` for the integration.
 ![alt text](assets/img/lambda_select.png)
 
+<br> **⚠️ NOTE** : In the permission-policy.json file make sure to include the AWS lambda function's ARN of all 3 agents(sql_agent, search_agent, schedule_agent) under resource block to allow lambda sink connectors to reuse the same IAM role.
 
 With your Lambda is ready and your IAM Assume Role Integration created, proceed to configure the Confluent-managed Kafka Sink Connector to invoke this function on every message received in sql_agent_input.
 
