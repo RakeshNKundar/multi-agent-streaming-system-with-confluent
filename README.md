@@ -93,6 +93,15 @@ This architecture includes:
 
 
 1. ### Create a MongoDB Programmatic Access API Key
+    Get the MongoDB Atlas Organization ID - https://cloud.mongodb.com/v2/
+    - Click on the ORGANIZATON <br>
+      <p><img src="assets/img/mongo_organization.png" alt="nim" width="300" /></p> <br>
+    - Click on the gear icon(⚙️) beside Organization Overview. <br>
+      <p><img src="assets/img/mongo_organization_gear_icon.png" alt="nim" width="300" /></p> <br>
+    - Copy the Organization ID. This is used by the terraform script to create a project and a mongodb free tiercluster. <br>
+      <p><img src="assets/img/mongo_atlas_organization_id.png" alt="nim" width="300" /></p> <br>
+
+    
     Create MongoDB Programmatic Access api key for your mongo account - https://www.mongodb.com/docs/atlas/configure-api-access-org/
     * In Atlas, go to the Organization Access Manager page.
     * Click the Applications tab
