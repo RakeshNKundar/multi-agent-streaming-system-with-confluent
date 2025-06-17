@@ -1,10 +1,20 @@
-data "mongodbatlas_project" "default" {
-  name = "Project 0"
+# data "mongodbatlas_project" "default" {
+#   name = "confluent_agentic_workshop"
+# }
+
+variable "mongodb_atlas_org_id" {
+  description = "MongoDB Atlas Organization ID"
+  type        = string
+}
+
+resource "mongodbatlas_project" "default" {
+  name   = "confluent_agentic_workshop"  # <- your project name
+  org_id = var.mongodb_atlas_org_id      # <- your MongoDB Atlas organization ID
 }
 
 
 resource "mongodbatlas_project_ip_access_list" "allow_all_ips" {
-  project_id = data.mongodbatlas_project.default.id
+  project_id = resource.mongodbatlas_project.default.id
   cidr_block = "0.0.0.0/0"
   comment    = "Allow all IPs for development"
 }
@@ -21,7 +31,7 @@ locals {
 resource "mongodbatlas_database_user" "default" {
   username           = local.mongo_workshop_database_user
   password           = local.mongo_workshop_database_pass
-  project_id         = data.mongodbatlas_project.default.id
+  project_id         = resource.mongodbatlas_project.default.id
   auth_database_name = "admin"
 
   roles {
@@ -50,7 +60,7 @@ resource "mongodbatlas_database_user" "default" {
 }
 
 resource "mongodbatlas_cluster" "default" {
-  project_id                  = data.mongodbatlas_project.default.id
+  project_id                  = resource.mongodbatlas_project.default.id
   name                        = "multi-agent-workplace-system"
   provider_name               = "TENANT"
   backing_provider_name       = "AWS"
@@ -85,7 +95,7 @@ resource "null_resource" "seed_mongodb" {
 
 
 resource "mongodbatlas_search_index" "default" {
-  project_id      = data.mongodbatlas_project.default.id
+  project_id      = resource.mongodbatlas_project.default.id
   name            = local.mongo_workshop_database_index
   cluster_name    = mongodbatlas_cluster.default.name
   collection_name = local.mongo_workshop_database_collection
