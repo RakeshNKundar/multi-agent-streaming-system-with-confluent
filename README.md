@@ -757,12 +757,10 @@ If a user asked:
 
 - Select the "Environments" tab and click on your cluster.
 
-- Select one of three Lambda Connectors we deployed and scroll down to the bottom.
+- Select the lambda Connectors we deployed and scroll down to the bottom.
 
 - Choose "Delete".
 ![Delete Resources Diagram](assets/img/delete_connector.png)
-
-- Similarly "Delete" all three connectors.
 
 - Navigate to <b>setup/teardown.sh</b> and edit the following:
 
