@@ -44,7 +44,7 @@ This architecture includes:
 
 ## Requirements
 - **Access:** 
-    - *Confluent Cloud Account Access* 
+    - *Confluent Cloud Account Access* - https://cnfl.io/getstarted
 
     - *MongoDB Atlas Account Access*
       - MongoDB provides a free-tier (M0) cluster, ideal for development and workshops. We’ll be using this during today’s session.
@@ -64,7 +64,7 @@ This architecture includes:
     - [MongoDB Database Tools](https://www.mongodb.com/docs/database-tools/installation/)
 
 - **Sign up for Confluent Cloud**
-    - Navigate to [Confluent Cloud Sign Up](https://confluent.cloud/signup?utm_campaign=tm.fm-ams_cd.Q424_AMER_GenAI_RAG_Workshop&utm_medium=workshop).
+    - Navigate to [Confluent Cloud Sign Up](https://cnfl.io/getstarted).
     - Sign up with any of the desired identity providers or your email ID.
         <p><img src="assets/img/signup.png" alt="sign-up" width="300" /></p>
     - Finish creating your account by filling in a couple of details.
