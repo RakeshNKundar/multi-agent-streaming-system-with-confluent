@@ -81,7 +81,7 @@ This architecture includes:
     git clone https://github.com/RakeshNKundar/multi-agent-streaming-system-with-confluent.git
     ```
 
-1. ### Create a Confluent Cloud API Key
+2. ### Create a Confluent Cloud API Key
     Create Confluent Cloud API Key for your confluent cloud account with resource scope as Cloud resource management.
     - Go to https://confluent.cloud/settings/api-keys
     - Click on My Account (Make sure you have Organization Admin RBAC role)
@@ -92,7 +92,7 @@ This architecture includes:
     <p><img src="assets/img/apikey.png" alt="nim" width="300" /></p>
 
 
-1. ### Create a MongoDB Programmatic Access API Key
+3. ### Create a MongoDB Programmatic Access API Key
     Get the MongoDB Atlas Organization ID - https://cloud.mongodb.com/v2/
     - Click on the ORGANIZATON <br>
       <p><img src="assets/img/mongo_organization.png" alt="nim"" /></p> <br>
@@ -109,7 +109,7 @@ This architecture includes:
     * Save the API Key for further use.
       <p><img src="assets/img/apikeymongo.png" alt="nim" width="300" /></p>
 
-1. ### Retrieve your AWS Access Keys from a Confluent-provided AWS account
+4. ### Retrieve your AWS Access Keys from a Confluent-provided AWS account
     If an AWS account is being provided to you for this workshop, follow the below instructions. 
     * Navigate to https://catalog.us-east-1.prod.workshops.aws
     * Sign in using the `Email One Time Password` option. 
@@ -125,13 +125,13 @@ This architecture includes:
       ![alt text](assets/img/ws_keys.png) <br>
 <br> **⚠️ NOTE:** Please use **US-WEST-2** region for this workshop as some LLM models used in this workshop might not have the same functionalities in other regions.
 
-1. ### [Alternative] Retrieve your AWS Access Keys from an AWS account you provide
+4. ### [Alternative] Retrieve your AWS Access Keys from an AWS account you provide
     In the event an AWS account is not provided to you for this workshop, you can use your own AWS account. When doing so you can deploy the upcoming Terraform script using [IAM Access Keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html) or the [AWS CLI Profile](https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-options.html) (ex. `aws configure --profile <profilename>`). <br><br>
     **⚠️ NOTE:** Please use **US-WEST-2** region for this workshop as some LLM models used in this workshop might not have the same functionalities in other regions. 
 
    
 
-4. ### Setup environment variables
+5. ### Setup environment variables
 
   * Navigate to <b>setup/init.sh</b> and edit the following:
 
@@ -147,7 +147,7 @@ This architecture includes:
     export AWS_SECRET_ACCESS_KEY="<AWS Access Key Secret>"
     export AWS_SESSION_TOKEN="<AWS Session Token>" #Only necessary if you are using a Confluent-provided AWS account or using the temporary credentials from your personal AWS account.
     ```
-2. After Setting the variables, run:
+  * After Setting the variables, run:
 
     ```bash
     chmod +x ./setup/init.sh
@@ -156,48 +156,49 @@ This architecture includes:
     **⚠️ NOTE:** Terraform would take around 5 minutes to provision the infrastructure.
   
 
-## Task 1 – Orchestrator Agent (LLM-based Decision Making)
+## Task 01 – Orchestrator Agent (LLM-based Decision Making)
 
 1. Go to the AWS Console and navigate to the Amazon Bedrock service.
-1. On the left hand panel, click on the `Model Access` option
+2. On the left hand panel, click on the `Model Access` option
 
     ![alt text](assets/img/model_access.png)
-1. Click the `Modify Access` button
+3. Click the `Modify Access` button
 
     ![alt text](assets/img/modify_access.png)
-1. Enable the following models (it is strongly recommended to only enable these models or else enablement will stall and require AWS Support):
+4. Enable the following models (it is strongly recommended to only enable these models or else enablement will stall and require AWS Support):
     - Titan Embeddings G1 - Text
     - Claude 3.5 Haiku
   
     It should only take 1-5 minutes for the models to enable. You will see the following when models are ready.
     ![alt text](assets/img/model_active.png)
     ![alt text](assets/img/model_active_2.png) 
-  
-1. Login to your confluent cloud account to see the different resources deployed on your environment.
 
-1. Navigate to the Environment labeled `confluent_agentic_workshop`
 
-1. Once in the Environment view, click the Integrations tab and create a new Connection. 
+5. Login to your confluent cloud account to see the different resources deployed on your environment.
+
+6. Navigate to the Environment labeled `confluent_agentic_workshop`
+
+7. Once in the Environment view, click the Integrations tab and create a new Connection. 
 ![Creating a connection to Amazon Bedrock](assets/img/integration.png)
 
-1. Select Amazon Bedrock as the service with which to create a connection. ![alt text](assets/img/service_select.png)
+8. Select Amazon Bedrock as the service with which to create a connection. ![alt text](assets/img/service_select.png)
 
-1. Fill out the form using following:
+9. Fill out the form using following:
     - Endpoint: `https://bedrock-runtime.<your_region>.amazonaws.com/model/anthropic.claude-3-5-haiku-20241022-v1:0/invoke`
     - aws access key - <Replace_with_your_own_access_key> 
     - aws secret key  - <Replace_with_your_own_access_secret_key>
     - aws session token - <Replace_with_your_own_session_token>
 
-1. Give your connection name of `bedrock-text-connection` and launch the connection. 
+10. Give your connection name of `bedrock-text-connection` and launch the connection. 
 
     ![alt text](assets/img/name_integration.png)
 
 
-1. Next, navigate to Flink with Confluent Cloud and open your SQL workspace. 
+11. Next, navigate to Flink with Confluent Cloud and open your SQL workspace. 
 
     ![alt text](assets/img/flink_nav.png)
 
-1. Run following queries within the SQL workspace you've opened up:
+12. Run following queries within the SQL workspace you've opened up:
 
     ```sql
     CREATE MODEL BedrockGeneralModel INPUT (text STRING) OUTPUT (response STRING) COMMENT 'General model with no system prompt.'
@@ -211,7 +212,6 @@ This architecture includes:
         );
 
     ```
-
 
     ```sql
     CREATE TABLE `orchestrator_metadata` AS 
@@ -293,9 +293,9 @@ This architecture includes:
     );
     ```
 
-1. Navigate to the Topics tab and find the `queries` topic. ![alt text](assets/img/queries_topic.png)
+13. Navigate to the Topics tab and find the `queries` topic. ![alt text](assets/img/queries_topic.png)
 
-1. Insert a sample query in the `queries` topic to test out our flink agent. 
+14. Insert a sample query in the `queries` topic to test out our flink agent. 
 
     ```json
     {
@@ -309,16 +309,16 @@ This architecture includes:
     ```
     ![alt text](assets/img/produce.png)
 
-5. Verify the data exists in the respective topics - **queries** and **orchestrator_metadata**. 
+15. Verify the data exists in the respective topics - **queries** and **orchestrator_metadata**. 
 
-6. Click the record in the `orchestrator_metadata` topic to view the field values. Take a look at the agent flags and observe which are true for the input we have given. ![alt text](assets/img/message_check.png)
+16. Click the record in the `orchestrator_metadata` topic to view the field values. Take a look at the agent flags and observe which are true for the input we have given. ![alt text](assets/img/message_check.png)
 
-7. Try It Yourself ✏️:
+17. Try It Yourself ✏️:
     1. How would you change the prompt to include the SQL agent for being called?
     2. What metadata is required for the scheduler agent?
     3. Publish one more query containing “schedule a 1:1 with my manager <your email> ”, which agents will be invoked now?
 
-## Task 2: Setup the Workflow distribution 
+## Task 02: Setup the Workflow distribution 
 Now that the Orchestrator Agent is up and running, it's time to activate the specialized agents that perform actual tasks.🧩 Concept Recap
 Each agent is an independent component in the system. Here's a quick breakdown:<br>
 🗄 SQL Agent: Retrieves employee or department-level data using employee_id or user_email from a SQL database.<br>
@@ -433,7 +433,7 @@ Create a few test queries that would intentionally route to each of these agents
 
 This will help populate the input topics and allow you to test the complete agent workflow.
 
-## Task 3: Integrate SQL Agent with Lambda Sink Connector
+## Task 03: Integrate SQL Agent with Lambda Sink Connector
 This task helps you build a fully managed Lambda Kafka Sink Connector that routes your queries to a SQL lambda agent.
 Goal:
 Stream sql_agent_input Kafka topic data directly to your AWS Lambda.
@@ -454,8 +454,8 @@ TOPIC_NAME=sql_agent_response
 ```
 Create a Lambda IAM Assume Role Integration
 1. Navigate to the Integrations tab of your environment and click Add Integration. ![alt text](assets/img/assume_role_integration.png)
-1. Select `New role`
-1. Select the `Lambda Sink` option and follow the rest of the integration set up as instructed. When instructed, provide a simple name such as `lambda iam assume role` for the integration.
+2. Select `New role`
+3. Select the `Lambda Sink` option and follow the rest of the integration set up as instructed. When instructed, provide a simple name such as `lambda iam assume role` for the integration.
 ![alt text](assets/img/lambda_select.png)
 
 <br> **⚠️ NOTE** : In the permission-policy.json file make sure to include the AWS lambda function's ARN of all 3 agents(sql_agent, search_agent, schedule_agent) under resource block to allow lambda sink connectors to reuse the same IAM role.
@@ -470,16 +470,16 @@ Step-by-step Setup:
 
 3. Select the `sql_agent_input` topic. Each time a record lands in this topic, the Lambda function will get triggered. ![alt text](assets/img/topic_select.png)
 
-1. During the authentication part, be sure you point this connector to the `sql_agent_<>` Lambda function and that you use the `IAM Roles` as the authentication method. The `Provider Integration` you created earlier is what you select last.
+4. During the authentication part, be sure you point this connector to the `sql_agent_<>` Lambda function and that you use the `IAM Roles` as the authentication method. The `Provider Integration` you created earlier is what you select last.
 
     ![alt text](assets/img/use_integration.png)
 
-1. Set the Input Kafka record value format to `AVRO`. Leave all other values as default/empty.
+5. Set the Input Kafka record value format to `AVRO`. Leave all other values as default/empty.
 sql_agent![alt text](assets/img/avro.png)
 
-1. Lastly, provide your connector a name of `SQLAgentSink`
+6. Lastly, provide your connector a name of `SQLAgentSink`
 
-## Task 4: Context Retrieval via Vector Search 
+## Task 04: Context Retrieval via Vector Search 
 We now add intelligence to our Research Agent using Amazon Bedrock embeddings + MongoDB vector search.
 
 1. Navivigate to the Integrations tab within your environment and create a anothers Connections integration. This time with the the following: 
@@ -494,7 +494,7 @@ We now add intelligence to our Research Agent using Amazon Bedrock embeddings + 
 
 
 
-1. Navigate back to Flink and run the following queries:
+2. Navigate back to Flink and run the following queries:
 
     Create Bedrock Model in Flink SQL
     ```sql
@@ -539,24 +539,7 @@ Step-by-step Setup:
 
    ![alt text](assets/img/two_lambda.png)
 
-
-## Task 5: Integrate Scheduler Agent with Lambda Sink Connector
-This task helps you build a fully managed Lambda Kafka Sink Connector that routes your queries to a Scheduler lambda agent , similar to how we did it for a sql agent.
-
-Goal:
-Stream scheduler_agent_input Kafka topic data directly to your AWS Lambda.
-
-
-1. Set up one more AWS Lambda Sink Connector using the configuration details below and deploy the connector. *Leave all other values that are not shown below as default or empty.*
-      - Topic: scheduler_agent_input
-      - AWS Lambda function name: scheduler_agent
-      - Authentication Method: IAM Roles
-      - Provider Integration Name: <the AWS Lambda Sink integration you set up>
-      - Input Kafka record value format: AVRO
-      - Connector name: SchedulerAgentSink
-
-
-## Task 06 (Optional) – Integrating Email service with Scheduler agent using AWS SNS
+## Task 05 (Optional) – Integrating Email service with Scheduler agent using AWS SNS
 You can send email notifications to about the meeting from the scheduler agent using AWS SNS service. The Scheduler agent pushes events to the SNS service. You can create an E-mail subscription out of the SNS topic using your email address to receive email notification.
 
 You need to create an email subscription on AWS SNS
@@ -572,6 +555,20 @@ Create a subscription and verify your email address via an email sent by SNS ser
 
 Once the email is verified you'll receive emails about the new events when a scheduler agent creates one.
 
+## Task 06: Integrate Scheduler Agent with Lambda Sink Connector
+This task helps you build a fully managed Lambda Kafka Sink Connector that routes your queries to a Scheduler lambda agent , similar to how we did it for a sql agent.
+
+Goal:
+Stream scheduler_agent_input Kafka topic data directly to your AWS Lambda.
+
+
+1. Set up one more AWS Lambda Sink Connector using the configuration details below and deploy the connector. *Leave all other values that are not shown below as default or empty.*
+      - Topic: scheduler_agent_input
+      - AWS Lambda function name: scheduler_agent
+      - Authentication Method: IAM Roles
+      - Provider Integration Name: <the AWS Lambda Sink integration you set up>
+      - Input Kafka record value format: AVRO
+      - Connector name: SchedulerAgentSink
 
 ## Task 07 – Final Agent Builder Join & response input Structuring
 Now that all three agents (SQL, Search, Scheduler) have emitted results, we perform a final conditional join with the orchestrator metadata. This gives us a fully enriched context for each user query.
