@@ -18,7 +18,7 @@ Participants will walk away with hands-on experience building a production-grade
 
 ## 🗺️ Architecture
 
-![Architecture Diagram](assets/img/architecture.png)
+![Architecture Diagram](assets/img/arch.png)
 
 This architecture includes:
 - **Orchestrator Agent**: Uses Bedrock LLM to decide which agents to invoke based on incoming user queries.
