@@ -156,7 +156,7 @@ This architecture includes:
     **⚠️ NOTE:** Terraform would take around 5 minutes to provision the infrastructure.
   
 
-## Task 1 – Orchestrator Agent (LLM-based Decision Making)
+## Task 01 – Orchestrator Agent (LLM-based Decision Making)
 
 1. Go to the AWS Console and navigate to the Amazon Bedrock service.
 1. On the left hand panel, click on the `Model Access` option
@@ -318,7 +318,7 @@ This architecture includes:
     2. What metadata is required for the scheduler agent?
     3. Publish one more query containing “schedule a 1:1 with my manager <your email> ”, which agents will be invoked now?
 
-## Task 2: Setup the Workflow distribution 
+## Task 02: Setup the Workflow distribution 
 Now that the Orchestrator Agent is up and running, it's time to activate the specialized agents that perform actual tasks.🧩 Concept Recap
 Each agent is an independent component in the system. Here's a quick breakdown:<br>
 🗄 SQL Agent: Retrieves employee or department-level data using employee_id or user_email from a SQL database.<br>
@@ -433,54 +433,26 @@ Create a few test queries that would intentionally route to each of these agents
 
 This will help populate the input topics and allow you to test the complete agent workflow.
 
-## Task 3: Integrate SQL Agent with Lambda Sink Connector
-This task helps you build a fully managed Lambda Kafka Sink Connector that routes your queries to a SQL lambda agent.
-Goal:
-Stream sql_agent_input Kafka topic data directly to your AWS Lambda.
 
-Before creating the connector, make sure the Lambda is properly configured.
-- Open the AWS Console.
-- Search for and open your Lambda function (e.g., sql_agent).
-- Validate the following environment variables to the function: 
+## Task 03 (Optional) – Integrating Email service with Scheduler agent using AWS SNS
+You can send email notifications to about the meeting from the scheduler agent using AWS SNS service. The Scheduler agent pushes events to the SNS service. You can create an E-mail subscription out of the SNS topic using your email address to receive email notification.
 
-```bash
-BOOTSTRAP_ENDPOINT=<your-confluent-bootstrap-endpoint>
-KAFKA_API_KEY=<your-kafka-api-key>
-KAFKA_API_SECRET=<your-kafka-api-secret>
-SCHEMA_REGISTRY_API_KEY=<your-schema-registry-api-key>
-SCHEMA_REGISTRY_API_SECRET=<your-schema-registry-api-secret>
-SCHEMA_REGISTRY_ENDPOINT=https://<your-schema-registry-endpoint>
-TOPIC_NAME=sql_agent_response
-```
-Create a Lambda IAM Assume Role Integration
-1. Navigate to the Integrations tab of your environment and click Add Integration. ![alt text](assets/img/assume_role_integration.png)
-1. Select `New role`
-1. Select the `Lambda Sink` option and follow the rest of the integration set up as instructed. When instructed, provide a simple name such as `lambda iam assume role` for the integration.
-![alt text](assets/img/lambda_select.png)
+You need to create an email subscription on AWS SNS
 
-<br> **⚠️ NOTE** : In the permission-policy.json file make sure to include the AWS lambda function's ARN of all 3 agents(sql_agent, search_agent, schedule_agent) under resource block to allow lambda sink connectors to reuse the same IAM role.
+  - Go to AWS SNS --> Click Subscription. 
+  - Fill in the details like the SNS topic arn, 
+      - Set Protocol = <b>Email</b>
+      - Type in your email address
+  
+  <p><img src="assets/img/sns_subscription.png" alt="sign-up" /></p>
 
-With your Lambda is ready and your IAM Assume Role Integration created, proceed to configure the Confluent-managed Kafka Sink Connector to invoke this function on every message received in sql_agent_input.
+Create a subscription and verify your email address via an email sent by SNS service.
 
-Step-by-step Setup:
-1. Go to Confluent Cloud > Connectors.
+Once the email is verified you'll receive emails about the new events when a scheduler agent creates one.
 
-2. Select AWS Lambda Sink Connector from the available connectors.
-![alt text](assets/img/connector_select.png)
 
-3. Select the `sql_agent_input` topic. Each time a record lands in this topic, the Lambda function will get triggered. ![alt text](assets/img/topic_select.png)
-
-1. During the authentication part, be sure you point this connector to the `sql_agent_<>` Lambda function and that you use the `IAM Roles` as the authentication method. The `Provider Integration` you created earlier is what you select last.
-
-    ![alt text](assets/img/use_integration.png)
-
-1. Set the Input Kafka record value format to `AVRO`. Leave all other values as default/empty.
-sql_agent![alt text](assets/img/avro.png)
-
-1. Lastly, provide your connector a name of `SQLAgentSink`
-
-## Task 4: Context Retrieval via Vector Search 
-We now add intelligence to our Research Agent using Amazon Bedrock embeddings + MongoDB vector search.
+## Task 04: Context Retrieval via Vector Search 
+We now navigate to add context to our Research Agent using Amazon Bedrock embeddings.
 
 1. Navivigate to the Integrations tab within your environment and create a anothers Connections integration. This time with the the following: 
  - Name: `bedrock-embedding-connection` 
@@ -493,8 +465,7 @@ We now add intelligence to our Research Agent using Amazon Bedrock embeddings + 
     ![alt text](assets/img/both_integrations.png)
 
 
-
-1. Navigate back to Flink and run the following queries:
+2. Navigate back to Flink and run the following queries:
 
     Create Bedrock Model in Flink SQL
     ```sql
@@ -521,59 +492,68 @@ We now add intelligence to our Research Agent using Amazon Bedrock embeddings + 
         )
     );
     ```
-4. This task helps you build a fully managed Lambda Kafka Sink Connector that routes your queries to a Search lambda agent , similar to how we did it for a sql agent.
-Goal: Stream search_embeddings Kafka topic data directly to your AWS Lambda.
-Step-by-step Setup:
-  1. Go to Confluent Cloud > Connectors.
 
-  2. Select AWS Lambda Sink Connector from the available connectors.
+4. Verify embeddings being generated in `search_embeddings` topics.
 
-  3. Fill in the relevant configuration details below and deploy the connector. *Leave all other values that are not shown below as default or empty.*
-      - Topic: search_embeddings
-      - AWS Lambda function name: search_agent
-      - Authentication Method: IAM Roles
-      - Provider Integration Name: <the AWS Lambda Sink integration you set up>
-      - Input Kafka record value format: AVRO
-      - Connector name: SearchAgentSink
-
-
-   ![alt text](assets/img/two_lambda.png)
-
-
-## Task 5: Integrate Scheduler Agent with Lambda Sink Connector
-This task helps you build a fully managed Lambda Kafka Sink Connector that routes your queries to a Scheduler lambda agent , similar to how we did it for a sql agent.
-
+## Task 05: Integrate Agents with Lambda Sink Connector
+This task helps you build a fully managed Lambda Kafka Sink Connector that routes your queries to all the lambda agents(SQL, Scheduler & Search).
 Goal:
-Stream scheduler_agent_input Kafka topic data directly to your AWS Lambda.
+Stream sql_agent_input , search_embeddings and scheduler_agent_input Kafka topics data directly to their respective AWS Lambda Agents.
 
+Before creating the connector, make sure the Lambda is properly configured.
+- Open the AWS Console.
+- Search for and open your Lambda function (e.g., sql_agent).
+- Validate the following environment variables to the function: 
 
-1. Set up one more AWS Lambda Sink Connector using the configuration details below and deploy the connector. *Leave all other values that are not shown below as default or empty.*
-      - Topic: scheduler_agent_input
-      - AWS Lambda function name: scheduler_agent
-      - Authentication Method: IAM Roles
-      - Provider Integration Name: <the AWS Lambda Sink integration you set up>
-      - Input Kafka record value format: AVRO
-      - Connector name: SchedulerAgentSink
+```bash
+BOOTSTRAP_ENDPOINT=<your-confluent-bootstrap-endpoint>
+KAFKA_API_KEY=<your-kafka-api-key>
+KAFKA_API_SECRET=<your-kafka-api-secret>
+SCHEMA_REGISTRY_API_KEY=<your-schema-registry-api-key>
+SCHEMA_REGISTRY_API_SECRET=<your-schema-registry-api-secret>
+SCHEMA_REGISTRY_ENDPOINT=https://<your-schema-registry-endpoint>
+TOPIC_NAME=sql_agent_response
+```
+Create a Lambda IAM Assume Role Integration
+1. Navigate to the Integrations tab of your environment and click Add Integration. ![alt text](assets/img/assume_role_integration.png)
+2. Select `New role`
+3. Select the `Lambda Sink` option and follow the rest of the integration set up as instructed. When instructed, provide a simple name such as `lambda iam assume role` for the integration.
+![alt text](assets/img/lambda_select.png)
 
+<br> **⚠️ NOTE** : In the permission-policy.json file make sure to include the AWS lambda function's ARN of all 3 agents(sql_agent, search_agent, schedule_agent) under resource block to allow lambda sink connectors to reuse the same IAM role.
 
-## Task 06 (Optional) – Integrating Email service with Scheduler agent using AWS SNS
-You can send email notifications to about the meeting from the scheduler agent using AWS SNS service. The Scheduler agent pushes events to the SNS service. You can create an E-mail subscription out of the SNS topic using your email address to receive email notification.
+With your Lambda is ready and your IAM Assume Role Integration created, proceed to configure the Confluent-managed Kafka Sink Connector to invoke this function on every message received in sql_agent_input.
 
-You need to create an email subscription on AWS SNS
+Step-by-step Setup:
+1. Go to Confluent Cloud > Connectors.
 
-  - Go to AWS SNS --> Click Subscription. 
-  - Fill in the details like the SNS topic arn, 
-      - Set Protocol = <b>Email</b>
-      - Type in your email address
+2. Select AWS Lambda Sink Connector from the available connectors.
+  ![alt text](assets/img/connector_select.png)
+
+3. Select the `sql_agent_input`, `search_embeddings` , `scheduler_agent_input` topic. Each time a record lands in these topic, the respective Lambda function will get triggered.
+
+    ![alt text](assets/img/topic_select.png)
+
+4. During the authentication part, be sure you point this connector input topics to the respective lambda functions/agents.
+  1. Set `AWS Lambda function configuration mode` to `multiple`.
+  2. Set `AWS Lambda function name to topic map` value to following topic to agent map.Please make sure to replace the agents with `sql_agent_<>` ,`scheduler_agent_<>` & `search_agent_<>` with your own   agents that are deployed on aws workspace.
+     `sql_agent_input;sql_agent_<>,scheduler_agent_input;scheduler_agent_<>,search_embeddings;search_agent_<>` 
   
-  <p><img src="assets/img/sns_subscription.png" alt="sign-up" /></p>
+    ![alt text](assets/img/lambdas.png)
 
-Create a subscription and verify your email address via an email sent by SNS service.
+5. Use the `IAM Roles` as the authentication method. The `Provider Integration` you created earlier is what you select last.
 
-Once the email is verified you'll receive emails about the new events when a scheduler agent creates one.
+    ![alt text](assets/img/sink_authentication.png)
 
+6. Set the Input Kafka record value format to `AVRO`. Leave all other values as default/empty.
+    ![alt text](assets/img/avro.png)
 
-## Task 07 – Final Agent Builder Join & response input Structuring
+7. Lastly, provide your connector a name of `AgentSinkConnector`
+
+8. Verify the responses in respective response topics.
+[alt text](assets/img/verify_response.png)
+
+## Task 06 – Final Agent Builder Join & response input Structuring
 Now that all three agents (SQL, Search, Scheduler) have emitted results, we perform a final conditional join with the orchestrator metadata. This gives us a fully enriched context for each user query.
 
 🔹 Step 1: Join All Agent Results
@@ -664,7 +644,7 @@ Explanation:
 - This filters out older or duplicate outputs and prepares a clean stream for the final response.
 
 
-## Task 08 – Final Response Generation (Natural Language)
+## Task 07 – Final Response Generation (Natural Language)
 Once all agent responses are joined and filtered into a clean stream (final_response_builder), we use a Bedrock LLM to formulate a natural language answer. This is the final response a user would see in Slack, email, or a chatbot.
 
 🔹 Step 1: Define Prompt Template for Bedrock
@@ -763,12 +743,10 @@ If a user asked:
 
 - Select the "Environments" tab and click on your cluster.
 
-- Select one of three Lambda Connectors we deployed and scroll down to the bottom.
+- Select the Lambda Connector we deployed and scroll down to the bottom.
 
 - Choose "Delete".
 ![Delete Resources Diagram](assets/img/delete_connector.png)
-
-- Similarly "Delete" all three connectors.
 
 - Navigate to <b>setup/teardown.sh</b> and edit the following:
 
