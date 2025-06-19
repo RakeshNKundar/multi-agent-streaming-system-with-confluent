@@ -69,7 +69,7 @@ This architecture includes:
         <p><img src="assets/img/cluster.png" alt="cluster" width="300" /></p>
     - Please click on the "click_here" link on the UI to enter a promo code.
         <p><img src="assets/img/paywall.png" alt="paywall" width="300" /></p>
-    - Enter the promo code : CONFLUENTDEV1_
+    - Enter the promo code : CONFLUENTDEV1
         <p><img src="assets/img/promo.png" alt="promo" width="300" /></p>
 
 ---
