@@ -10,9 +10,9 @@ This project demonstrates how to build an LLM-powered multi-agent system for wor
 
 - Querying company/employee data from SQL databases
 - Searching context from internal documents using embeddings
-- Executing tasks like schedulin and sending emails using automation agents
+- Executing tasks like scheduling and sending emails using automation agents
 
-Participants will walk away with hands-on experience building a production-grade GenAI application with real-time agent coordination.
+Participants will walk away with hands-on experience building a scalable and fault-tolerant GenAI application with real-time agent coordination.
 
 ---
 
@@ -22,9 +22,9 @@ Participants will walk away with hands-on experience building a production-grade
 
 This architecture includes:
 - **Orchestrator Agent**: Uses Bedrock LLM to decide which agents to invoke based on incoming user queries.
-- **Query Agent**: Fetches data from relational databases (PostgreSQL).
+- **Query Agent**: Fetches data from relational databases (SQL).
 - **Research Agent**: Searches company documents using vector search and embeddings.
-- **Task Agent**: Performs action-oriented tasks like scheduling via calendar APIs.
+- **Task Agent**: Performs action-oriented tasks like scheduling meetings , reminders and events via sns.
 - **Final Response Builder**: Joins all agent results and converts structured data into a final natural language response.
 
 ---
@@ -106,7 +106,7 @@ This architecture includes:
       <p><img src="assets/img/mongo_organization.png" alt="nim"" /></p> <br>
     - Click on the gear icon(⚙️) beside Organization Overview. <br>
       <p><img src="assets/img/mongo_organization_gear_icon.png" alt="nim" width="300" /></p> <br>
-    - Copy the Organization ID. This is used by the terraform script to create a project and a mongodb free tiercluster. <br>
+    - Copy the Organization ID. This is used by the terraform script to create a project and a mongodb free tier cluster. <br>
       <p><img src="assets/img/mongo_atlas_organization_id.png" alt="nim"/></p> <br>
 
     
@@ -119,7 +119,7 @@ This architecture includes:
 
 4. ### Retrieve your AWS Access Keys from a Confluent-provided AWS account
     If an AWS account is being provided to you for this workshop, follow the below instructions. 
-    * Navigate to https://catalog.us-east-1.prod.workshops.aws
+    * Navigate to https://catalog.us-east-1.prod.workshops.aws/event/dashboard
     * Sign in using the `Email One Time Password` option. 
     * Once logged in, input the Event access code that you were given for this workhop. If you do not have your event access code, please notify an event supporter to obtain an access code.
     ![alt text](assets/img/event_access_code.png)
@@ -166,6 +166,10 @@ This architecture includes:
 
 ## Task 01 – Orchestrator Agent (LLM-based Decision Making)
 
+You can integrate generative AI directly into your streaming data pipelines using Confluent Cloud’s AI Model Inference feature. This allows you to call large language models (LLMs) directly within Flink SQL. We will now be using this inference feature to implement our orchestration pipeline.
+Learn more: https://docs.confluent.io/cloud/current/ai/ai-model-inference.html
+
+
 1. Go to the AWS Console and navigate to the Amazon Bedrock service.
 2. On the left hand panel, click on the `Model Access` option
 
@@ -205,6 +209,8 @@ This architecture includes:
 11. Next, navigate to Flink with Confluent Cloud and open your SQL workspace. 
 
     ![alt text](assets/img/flink_nav.png)
+
+
 
 12. Run following queries within the SQL workspace you've opened up:
 
@@ -300,6 +306,7 @@ This architecture includes:
         )
     );
     ```
+
 
 13. Navigate to the Topics tab and find the `queries` topic. ![alt text](assets/img/queries_topic.png)
 
@@ -442,7 +449,7 @@ Create a few test queries that would intentionally route to each of these agents
 This will help populate the input topics and allow you to test the complete agent workflow.
 
 ## Task 03 (Optional) – Integrating Email service with Scheduler agent using AWS SNS
-You can send email notifications to about the meeting from the scheduler agent using AWS SNS service. The Scheduler agent pushes events to the SNS service. You can create an E-mail subscription out of the SNS topic using your email address to receive email notification.
+You can send email notifications about the meeting from the scheduler agent using AWS SNS service. The Scheduler agent pushes events to the SNS service. You can create an E-mail subscription out of the SNS topic using your email address to receive email notification.
 
 You need to create an email subscription on AWS SNS
 
@@ -460,7 +467,7 @@ Once the email is verified you'll receive emails about the new events when a sch
 ## Task 04: Context Retrieval via Vector Search 
 We now navigate to add context to our Research Agent using Amazon Bedrock embeddings.
 
-1. Navivigate to the Integrations tab within your environment and create a anothers Connections integration. This time with the the following: 
+1. Navigate to the Integrations tab within your environment and create another Connections integration. This time with the the following: 
  - Name: `bedrock-embedding-connection` 
  - Endpoint: `https://bedrock-runtime.<your_current_region>.amazonaws.com/model/amazon.titan-embed-text-v1/invoke`. 
  
@@ -523,7 +530,7 @@ TOPIC_NAME=sql_agent_response
 Create a Lambda IAM Assume Role Integration
 1. Navigate to the Integrations tab of your environment and click Add Integration. ![alt text](assets/img/assume_role_integration.png)
 2. Select `New role`
-3. Select the `Lambda Sink` option and follow the rest of the integration set up as instructed. When instructed, provide a simple name such as `lambda iam assume role` for the integration.
+3. Select the `Lambda Sink` option and follow the rest of the integration set up as instructed. When instructed, provide a simple name such as `lambda_iam_assume_role` for the integration.
 ![alt text](assets/img/lambda_select.png)
 
 <br> **⚠️ NOTE** : In the permission-policy.json file make sure to include the AWS lambda function's ARN of all 3 agents(sql_agent, search_agent, schedule_agent) under resource block to allow lambda sink connectors to reuse the same IAM role.
@@ -657,6 +664,7 @@ Explanation:
 
 - This filters out older or duplicate outputs and prepares a clean stream for the final response.
 
+NOTE: You can find more information about Flink Window aggregations & joins [here](https://docs.confluent.io/cloud/current/flink/reference/queries/window-tvf.html).
 
 ## Task 07 – Final Response Generation (Natural Language)
 Once all agent responses are joined and filtered into a clean stream (final_response_builder), we use a Bedrock LLM to formulate a natural language answer. This is the final response a user would see in Slack, email, or a chatbot.
