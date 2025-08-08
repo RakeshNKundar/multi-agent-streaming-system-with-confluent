@@ -314,7 +314,7 @@ Learn more: https://docs.confluent.io/cloud/current/ai/ai-model-inference.html
                     )
                 )
             );
-            ```
+    ```
 
 
 13. Navigate to the Topics tab and find the `queries` topic. ![alt text](assets/img/queries_topic.png)
