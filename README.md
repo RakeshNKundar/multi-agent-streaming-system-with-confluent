@@ -215,38 +215,48 @@ Learn more: https://docs.confluent.io/cloud/current/ai/ai-model-inference.html
 12. Run following queries within the SQL workspace you've opened up:
 
     ```sql
-    CREATE MODEL BedrockGeneralModel INPUT (text STRING) OUTPUT (response STRING) COMMENT 'General model with no system prompt.'
+    CREATE MODEL BedrockGeneralModel 
+    INPUT (text STRING) 
+    OUTPUT (sql_agent STRING, sql_agent_query STRING, sql_agent_user_email STRING, 
+            sql_agent_employee_id STRING, search_agent STRING, search_agent_query STRING,
+            scheduler_agent STRING, scheduler_title STRING, scheduler_description STRING,
+            scheduler_location STRING, scheduler_start STRING, scheduler_end STRING,
+            scheduler_attendees ARRAY<STRING>, execution_sequence ARRAY<STRING>)
     WITH
-        (
-            'task' = 'text_generation',
-            'provider' = 'bedrock',
-            'bedrock.PARAMS.max_tokens' = '200000',
-            'bedrock.PARAMS.temperature' = '0.1',
-            'bedrock.connection' = 'bedrock-text-connection'
-        );
+    (
+        'task' = 'text_generation',
+        'provider' = 'bedrock',
+        'bedrock.PARAMS.max_tokens' = '200000',
+        'bedrock.PARAMS.temperature' = '0.1',
+        'bedrock.connection' = 'bedrock-text-connection',
+        'bedrock.output_format'= 'json:/content/0/text'
+    );
 
     ```
 
     ```sql
     CREATE TABLE `orchestrator_metadata` AS 
     SELECT 
-        JSON_VALUE(response, '$.sql_agent') AS sql_agent,
-        JSON_VALUE(response, '$.sql_agent_metadata.query') AS sql_agent_query,
-        JSON_VALUE(response, '$.sql_agent_metadata.user_email') AS sql_agent_user_email,
-        JSON_VALUE(response, '$.sql_agent_metadata.employee_id') AS sql_agent_employee_id,
-
-        JSON_VALUE(response, '$.search_agent') AS search_agent,
-        JSON_VALUE(response, '$.search_agent_metadata.query') AS search_agent_query,
-
-        JSON_VALUE(response, '$.scheduler_agent') AS scheduler_agent,
-        JSON_VALUE(response, '$.scheduler_agent_metadata.title') AS scheduler_title,
-        JSON_VALUE(response, '$.scheduler_agent_metadata.description') AS scheduler_description,
-        JSON_VALUE(response, '$.scheduler_agent_metadata.location') AS scheduler_location,
-        JSON_VALUE(response, '$.scheduler_agent_metadata.start') AS scheduler_start,
-        JSON_VALUE(response, '$.scheduler_agent_metadata.end') AS scheduler_end,
-        JSON_QUERY(response, '$.scheduler_agent_metadata.attendees') AS scheduler_attendees,
-        JSON_QUERY(response, '$.sequence') AS execution_sequence,`timestamp`,
-    message_id,user_email,session_id,employee_id,message
+        sql_agent,
+        sql_agent_query,
+        sql_agent_user_email,
+        sql_agent_employee_id,
+        search_agent,
+        search_agent_query,
+        scheduler_agent,
+        scheduler_title,
+        cheduler_description,
+        scheduler_location,
+        scheduler_start,
+        scheduler_end,
+        scheduler_attendees,
+        execution_sequence,
+        `timestamp`,
+        message_id,
+        user_email,
+        session_id,
+        employee_id,
+        message
     FROM 
         queries ,
     LATERAL TABLE(
@@ -254,57 +264,56 @@ Learn more: https://docs.confluent.io/cloud/current/ai/ai-model-inference.html
             'BedrockGeneralModel',(
                 'You are a query router for a multi-agent workplace assistant.
 
-    Given the user input, extract:
+            Given the user input, extract:
 
-    1. Which agents are required
-    2. A relevant fragment of the query for each agent — do not copy the full query unless necessary
-    3. Agent-specific metadata in structured JSON
-    4. An execution sequence, if applicable.
+            1. Which agents are required.
+            2. A relevant fragment of the query for each agent — do not copy the full query unless necessary
+            3. An execution sequence, if applicable.
 
-    Descriptions of agents:
+            Descriptions of agents:
 
-    * sql\_agent: Handles employee- or department-level data queries from SQL using employee\_id or user\_email.
-    * search\_agent: Retrieves top documents or policies using vector search based on semantic meaning.
-    * scheduler\_agent: Schedules meetings or creates events using provided attendees, title, and time.
+            * sql\_agent: Handles employee- or department-level data queries from SQL using employee\_id or user\_email.
+            * search\_agent: Retrieves top documents or policies using vector search based on semantic meaning.
+            * scheduler\_agent: Schedules meetings or creates events using provided attendees, title, and time.
 
-    Return the result in strict JSON using this structure:
+            You must return only the following JSON structure, preserving all fields exactly as shown.
 
-    {
-      "sql_agent": true | false,
-      "sql_agent_metadata": {
-        "query": "<original message from user>",
-        "user_email": "<original user_email>",
-        "employee_id": "<original employee_id>"
-      },
+            - Use `"true"` or `"false"` (as lowercase strings, not booleans) for agent flags.
+            - If a field is not applicable, return an empty string (`""`).
+            - For non-invoked agents, set all related fields to empty strings (`""`) or empty arrays (`[]`)
+            - The JSON structure must always be complete, even if some values are empty.
+            - Do not include any explanatory text before or after the JSON.
 
-      "search_agent": true | false,
-      "search_agent_metadata": {
-        "query": "<original message from user>"
-      },
+            {
+              "sql_agent": <true/false>,
+              "sql_agent_query": "<original message from user>",
+              "sql_agent_user_email": "<original user_email>",
+              "sql_agent_employee_id": "<original employee_id>",
 
-      "scheduler_agent": true | false,
-      "scheduler_agent_metadata": {
-        "title": "Meeting Title",
-        "description": "Purpose of the meeting",
-        "location": "Virtual",
-        "start": "2025-05-06T15:00:00Z",
-        "end": "2025-05-06T16:00:00Z",
-        "attendees": ["<user_email or mentioned email>"]
-      },
+              "search_agent": <true/false>,
+              "search_agent_query": "<original message from user>",
 
-      "sequence": ["scheduler_agent", "search_agent", "sql_agent"]
-    }
+              "scheduler_agent": <true/false>,
+              "scheduler_title": "Meeting Title",
+              "scheduler_description": "Purpose of the meeting",
+              "scheduler_location": "Virtual",
+              "scheduler_start": "2025-05-06T15:00:00Z",
+              "scheduler_end": "2025-05-06T16:00:00Z",
+              "scheduler_attendees": ["<user_email or mentioned email>"]
+
+              "execution_sequence": ["scheduler_agent", "search_agent", "sql_agent"]
+            }
 
       
-    ' || '\n User prompt: ' ||
-                '{
-      message_id: ' || message_id || ','
-      'employee_id: '||  employee_id || ','
-      'user_email:' || user_email || ','
-      'message:'|| message || '}'
-            )
-        )
-    );
+            ' || '\n User prompt: ' ||
+                        '{
+              message_id: ' || message_id || ','
+              'employee_id: '||  employee_id || ','
+              'user_email:' || user_email || ','
+              'message:'|| message || '}'
+                    )
+                )
+            );
     ```
 
 
