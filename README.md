@@ -724,7 +724,7 @@ LATERAL TABLE(
     'Meeting Title: ' ||  IFNULL(scheduler_title, 'none') || '\n' ||
     'Description: ' ||  IFNULL(scheduler_description, 'none') || '\n' ||
 
-    'Execution Sequence: ' || IFNULL(execution_sequence, 'none') || '\n\n' ||
+    'Execution Sequence: ' || CAST(IFNULL(execution_sequence, ARRAY['none']) AS VARCHAR) || '\n\n' ||
 
     'Generate a complete, professional answer below:\n'
   )
