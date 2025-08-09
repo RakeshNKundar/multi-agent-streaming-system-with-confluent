@@ -691,7 +691,7 @@ Once all agent responses are joined and filtered into a clean stream (final_resp
         'bedrock.connection' = 'bedrock-text-connection'
     );
 
-    ```
+```
 
 🔹 Step 2: Define Prompt Template for Bedrock
 We'll send a structured prompt to the LLM, containing:
