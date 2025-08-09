@@ -245,6 +245,7 @@ Learn more: https://docs.confluent.io/cloud/current/ai/ai-model-inference.html
         search_agent_query,
         scheduler_agent,
         scheduler_title,
+        bedrock_json_mode_changes-1
         scheduler_description,
         scheduler_location,
         scheduler_start,
