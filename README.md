@@ -676,7 +676,7 @@ NOTE: You can find more information about Flink Window aggregations & joins [her
 ## Task 07 – Final Response Generation (Natural Language)
 Once all agent responses are joined and filtered into a clean stream (final_response_builder), we use a Bedrock LLM to formulate a natural language answer. This is the final response a user would see in Slack, email, or a chatbot.
 
-🔹 Step 1: Create a model instance for Final reponse generator
+🔹 Step 1: Create a model instance for Final response generator
 
 ```sql
     CREATE MODEL BedrockGeneralModelFinalResponse 
