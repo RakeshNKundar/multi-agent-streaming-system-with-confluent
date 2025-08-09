@@ -245,7 +245,8 @@ Learn more: https://docs.confluent.io/cloud/current/ai/ai-model-inference.html
         search_agent_query,
         scheduler_agent,
         scheduler_title,
-        cheduler_description,
+        bedrock_json_mode_changes-1
+        scheduler_description,
         scheduler_location,
         scheduler_start,
         scheduler_end,
@@ -407,9 +408,7 @@ SELECT
     message,
     session_id , 
     `timestamp`,
-  SPLIT(
-  REGEXP_REPLACE(scheduler_attendees, '\\["|\\"]', ''), '","'
-) AS attendees
+    scheduler_attendees AS attendees
 FROM orchestrator_metadata
 WHERE scheduler_agent = 'true';
 ```
@@ -678,7 +677,24 @@ NOTE: You can find more information about Flink Window aggregations & joins [her
 ## Task 07 – Final Response Generation (Natural Language)
 Once all agent responses are joined and filtered into a clean stream (final_response_builder), we use a Bedrock LLM to formulate a natural language answer. This is the final response a user would see in Slack, email, or a chatbot.
 
-🔹 Step 1: Define Prompt Template for Bedrock
+🔹 Step 1: Create a model instance for Final response generator
+
+```sql
+    CREATE MODEL BedrockGeneralModelFinalResponse 
+    INPUT (text STRING) 
+    OUTPUT (response STRING)
+    WITH
+    (
+        'task' = 'text_generation',
+        'provider' = 'bedrock',
+        'bedrock.PARAMS.max_tokens' = '200000',
+        'bedrock.PARAMS.temperature' = '0.1',
+        'bedrock.connection' = 'bedrock-text-connection'
+    );
+
+```
+
+🔹 Step 2: Define Prompt Template for Bedrock
 We'll send a structured prompt to the LLM, containing:
 - The original user message
 - Agent metadata
@@ -693,7 +709,7 @@ SELECT
   message_id,user_email,session_id,employee_id,message,`response` as final_response_text FROM final_response_builder,
 LATERAL TABLE(
   ML_PREDICT(
-    'BedrockGeneralModel',
+    'BedrockGeneralModelFinalResponse',
     'You are a helpful workplace assistant. Summarize the structured agent responses below into a natural and helpful reply to the user.' || '\n\n' ||
 
     '---' || '\n' ||
@@ -709,7 +725,7 @@ LATERAL TABLE(
     'Meeting Title: ' ||  IFNULL(scheduler_title, 'none') || '\n' ||
     'Description: ' ||  IFNULL(scheduler_description, 'none') || '\n' ||
 
-    'Execution Sequence: ' || IFNULL(execution_sequence, 'none') || '\n\n' ||
+    'Execution Sequence: ' || CAST(IFNULL(execution_sequence, ARRAY['none']) AS VARCHAR) || '\n\n' ||
 
     'Generate a complete, professional answer below:\n'
   )
