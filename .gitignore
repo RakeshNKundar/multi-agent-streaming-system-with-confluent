@@ -14,10 +14,13 @@ trial*
 .env.production.local
 .terraform*
 terraform.tfstate*
-sql_agent_lambda.zip
+mongo_agent_lambda.zip
 scheduler_agent_lambda.zip
 search_agent_lambda.zip
 env/
 scheduler-lambda.zip
 queries/
 .cc-dotfiles/
+commands.txt
+prev.avsc
+sql_agent_lambda.zip
