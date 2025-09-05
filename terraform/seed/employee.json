@@ -1,0 +1,325 @@
+[
+    {
+        "employee_id": "E001",
+        "full_name": "John Smith",
+        "first_name": "John",
+        "last_name": "Smith",
+        "email": "john.smith@company.com",
+        "phone": "555-1234",
+        "hire_date": "2020-06-15",
+        "job_title": "Senior Software Engineer",
+        "job_level": "IC3",
+        "manager_id": "E101",
+        "manager_name": "David Miller",
+        "employment_type": "Full Time",
+        "status": "Active",
+        "compensation": {
+            "base_salary": 110000,
+            "currency": "USD",
+            "bonus_eligibility": true,
+            "stock_options": 5000
+        },
+        "work_location": {
+            "office": "San Francisco HQ",
+            "remote_status": "Hybrid",
+            "country": "United States",
+            "region": "North America",
+            "time_zone": "PST"
+        },
+        "skills": [
+            "Java",
+            "Flink",
+            "Kafka",
+            "AWS",
+            "Microservices"
+        ],
+        "projects": [
+            {
+                "project_id": "P1001",
+                "project_name": "Real-time Analytics Platform",
+                "role": "Lead Developer",
+                "start_date": "2021-03-01",
+                "end_date": null,
+                "status": "Active"
+            }
+        ],
+        "performance_reviews": [
+            {
+                "review_period": "2022 H1",
+                "rating": "Exceeds Expectations",
+                "reviewer": "David Miller",
+                "comments": "Strong leadership in migration to Confluent Cloud."
+            }
+        ],
+        "benefits": {
+            "health_insurance": "Premium Plan",
+            "retirement_plan": "401k Matching",
+            "paid_time_off": 25
+        },
+        "tenure_years": 3.2,
+        "last_promotion_date": "2022-07-01",
+        "next_eligible_promotion": "2024-07-01",
+        "tags": [
+            "high-potential",
+            "engineering-leadership"
+        ]
+    },
+    {
+        "employee_id": "E002",
+        "full_name": "Emma Johnson",
+        "first_name": "Emma",
+        "last_name": "Johnson",
+        "email": "emma.johnson@company.com",
+        "phone": "555-2345",
+        "hire_date": "2021-02-10",
+        "job_title": "HR Specialist",
+        "job_level": "IC2",
+        "manager_id": "E102",
+        "manager_name": "Jennifer Wilson",
+        "employment_type": "Full Time",
+        "status": "Active",
+        "compensation": {
+            "base_salary": 75000,
+            "currency": "EUR",
+            "bonus_eligibility": false,
+            "stock_options": 0
+        },
+        "work_location": {
+            "office": "Berlin Office",
+            "remote_status": "Remote",
+            "country": "Germany",
+            "region": "Europe",
+            "time_zone": "CET"
+        },
+        "skills": [
+            "HR Policies",
+            "Recruitment",
+            "Payroll",
+            "Onboarding"
+        ],
+        "projects": [
+            {
+                "project_id": "P2001",
+                "project_name": "Global HRIS Implementation",
+                "role": "Coordinator",
+                "start_date": "2021-05-01",
+                "end_date": "2022-02-28",
+                "status": "Completed"
+            }
+        ],
+        "performance_reviews": [
+            {
+                "review_period": "2022 H2",
+                "rating": "Meets Expectations",
+                "reviewer": "Jennifer Wilson",
+                "comments": "Managed onboarding effectively."
+            }
+        ],
+        "benefits": {
+            "health_insurance": "Standard Plan",
+            "retirement_plan": "Pension",
+            "paid_time_off": 20
+        },
+        "tenure_years": 2.0,
+        "last_promotion_date": null,
+        "next_eligible_promotion": "2024-02-10",
+        "tags": [
+            "hr",
+            "europe"
+        ]
+    },
+    {
+        "employee_id": "E003",
+        "full_name": "Michael Williams",
+        "first_name": "Michael",
+        "last_name": "Williams",
+        "email": "michael.williams@company.com",
+        "phone": "555-3456",
+        "hire_date": "2022-01-05",
+        "job_title": "Financial Analyst",
+        "job_level": "IC1",
+        "manager_id": "E103",
+        "manager_name": "James Taylor",
+        "employment_type": "Contract",
+        "status": "Active",
+        "compensation": {
+            "base_salary": 85000,
+            "currency": "USD",
+            "bonus_eligibility": false,
+            "stock_options": 0
+        },
+        "work_location": {
+            "office": "New York Office",
+            "remote_status": "Onsite",
+            "country": "United States",
+            "region": "North America",
+            "time_zone": "EST"
+        },
+        "skills": [
+            "Financial Modeling",
+            "Excel",
+            "Tableau",
+            "Forecasting"
+        ],
+        "projects": [
+            {
+                "project_id": "P3001",
+                "project_name": "Quarterly Earnings Analysis",
+                "role": "Analyst",
+                "start_date": "2022-01-15",
+                "end_date": null,
+                "status": "Active"
+            }
+        ],
+        "performance_reviews": [
+            {
+                "review_period": "2022 H2",
+                "rating": "Exceeds Expectations",
+                "reviewer": "James Taylor",
+                "comments": "Delivered accurate and detailed reports."
+            }
+        ],
+        "benefits": {
+            "health_insurance": "Not Eligible",
+            "retirement_plan": "Not Eligible",
+            "paid_time_off": 0
+        },
+        "tenure_years": 1.1,
+        "last_promotion_date": null,
+        "next_eligible_promotion": null,
+        "tags": [
+            "finance",
+            "contractor"
+        ]
+    },
+    {
+        "employee_id": "E004",
+        "full_name": "Rajesh Kumar",
+        "first_name": "Rajesh",
+        "last_name": "Kumar",
+        "email": "rajesh.kumar@company.com",
+        "phone": "555-4567",
+        "hire_date": "2019-11-20",
+        "job_title": "Product Manager",
+        "job_level": "M1",
+        "manager_id": "E104",
+        "manager_name": "Vaishnavi Deshpande",
+        "employment_type": "Full Time",
+        "status": "Active",
+        "compensation": {
+            "base_salary": 120000,
+            "currency": "INR",
+            "bonus_eligibility": true,
+            "stock_options": 3000
+        },
+        "work_location": {
+            "office": "Bengaluru Tech Park",
+            "remote_status": "Hybrid",
+            "country": "India",
+            "region": "Asia/Pacific",
+            "time_zone": "IST"
+        },
+        "skills": [
+            "Product Strategy",
+            "Agile",
+            "User Research",
+            "Roadmapping"
+        ],
+        "projects": [
+            {
+                "project_id": "P4001",
+                "project_name": "Mobile App Redesign",
+                "role": "Product Owner",
+                "start_date": "2020-01-15",
+                "end_date": "2021-03-30",
+                "status": "Completed"
+            }
+        ],
+        "performance_reviews": [
+            {
+                "review_period": "2022 H1",
+                "rating": "Meets Expectations",
+                "reviewer": "Vaishnavi Deshpande",
+                "comments": "Delivered on product roadmap milestones."
+            }
+        ],
+        "benefits": {
+            "health_insurance": "Premium Family Plan",
+            "retirement_plan": "EPF",
+            "paid_time_off": 28
+        },
+        "tenure_years": 3.8,
+        "last_promotion_date": "2021-11-01",
+        "next_eligible_promotion": "2023-11-01",
+        "tags": [
+            "product",
+            "asia",
+            "leadership"
+        ]
+    },
+    {
+        "employee_id": "E005",
+        "full_name": "Sophia Lee",
+        "first_name": "Sophia",
+        "last_name": "Lee",
+        "email": "sophia.lee@company.com",
+        "phone": "555-5678",
+        "hire_date": "2018-09-12",
+        "job_title": "Marketing Director",
+        "job_level": "M2",
+        "manager_id": "E105",
+        "manager_name": "Robert Brown",
+        "employment_type": "Full Time",
+        "status": "Active",
+        "compensation": {
+            "base_salary": 135000,
+            "currency": "USD",
+            "bonus_eligibility": true,
+            "stock_options": 8000
+        },
+        "work_location": {
+            "office": "London Office",
+            "remote_status": "Hybrid",
+            "country": "United Kingdom",
+            "region": "Europe",
+            "time_zone": "GMT"
+        },
+        "skills": [
+            "Digital Marketing",
+            "SEO",
+            "Campaign Strategy",
+            "Brand Management"
+        ],
+        "projects": [
+            {
+                "project_id": "P5001",
+                "project_name": "Global Brand Awareness Campaign",
+                "role": "Director",
+                "start_date": "2019-01-01",
+                "end_date": null,
+                "status": "Active"
+            }
+        ],
+        "performance_reviews": [
+            {
+                "review_period": "2022 H2",
+                "rating": "Exceeds Expectations",
+                "reviewer": "Robert Brown",
+                "comments": "Successfully expanded digital presence in APAC region."
+            }
+        ],
+        "benefits": {
+            "health_insurance": "Executive Plan",
+            "retirement_plan": "Pension",
+            "paid_time_off": 30
+        },
+        "tenure_years": 5.0,
+        "last_promotion_date": "2020-09-01",
+        "next_eligible_promotion": "2024-09-01",
+        "tags": [
+            "marketing",
+            "leadership",
+            "global"
+        ]
+    }
+]

@@ -3,16 +3,16 @@ output "gameday_sns_topic_arn" {
   value = aws_sns_topic.gameday_sns_topic.arn
 }
 
-output "sql_agent_lambda" {
-  value = aws_lambda_function.sql_agent.arn
-}
+# output "mongo_agent_lambda" {
+#   value = aws_lambda_function.mongo_agent.arn
+# }
 
 output "scheduler_agent_lambda" {
   value = aws_lambda_function.scheduler_agent.arn
 }
 
-output "sql_agent_response_topic" {
-  value = confluent_kafka_topic.sql_agent_response.id
+output "mongo_agent_response_topic" {
+  value = confluent_kafka_topic.mongo_agent_response.id
 }
 
 output "scheduler_agent_response_topic" {

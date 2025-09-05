@@ -17,14 +17,14 @@ resource "confluent_schema" "Queries" {
   }
 }
 
-resource "confluent_schema" "sql_agent_response" {
+resource "confluent_schema" "mongo_agent_response" {
   schema_registry_cluster {
     id = confluent_schema_registry_cluster.default.id
   }
   rest_endpoint      = confluent_schema_registry_cluster.default.rest_endpoint
-  subject_name       = "sql_agent_response-value"
+  subject_name       = "mongo_agent_response-value"
   format             = "AVRO"
-  schema             = file("../schemas/sql_agent_response.avsc")
+  schema             = file("../schemas/mongo_agent_response.avsc")
   recreate_on_update = false
   hard_delete        = true
   credentials {

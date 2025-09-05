@@ -15,11 +15,11 @@ resource "confluent_kafka_topic" "queries" {
   }
 }
 
-resource "confluent_kafka_topic" "sql_agent_response" {
+resource "confluent_kafka_topic" "mongo_agent_response" {
   kafka_cluster {
     id = confluent_kafka_cluster.default.id
   }
-  topic_name       = "sql_agent_response"
+  topic_name       = "mongo_agent_response"
   rest_endpoint    = confluent_kafka_cluster.default.rest_endpoint
   partitions_count = 1
   credentials {
