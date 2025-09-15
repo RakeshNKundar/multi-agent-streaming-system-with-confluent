@@ -41,7 +41,7 @@ output "schema_registry_api_secret" {
 }
 
 output "schema_registry_endpoint" {
-  value = confluent_schema_registry_cluster.default.rest_endpoint
+  value = data.confluent_schema_registry_cluster.default.rest_endpoint
 }
 
 output "flink_api_key" {

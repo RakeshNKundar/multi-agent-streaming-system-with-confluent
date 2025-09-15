@@ -127,7 +127,7 @@ data "archive_file" "search_agent_lambda" {
 #       KAFKA_API_SECRET           = confluent_api_key.cluster-api-key.secret
 #       SCHEMA_REGISTRY_API_KEY    = confluent_api_key.schema-registry-api-key.id
 #       SCHEMA_REGISTRY_API_SECRET = confluent_api_key.schema-registry-api-key.secret
-#       SCHEMA_REGISTRY_ENDPOINT   = confluent_schema_registry_cluster.default.rest_endpoint
+#       SCHEMA_REGISTRY_ENDPOINT   = data.confluent_schema_registry_cluster.default.rest_endpoint
 #       mongo_agent_result_topic   = "mongo_agent_response"
 #     }
 #   }
@@ -162,7 +162,7 @@ resource "aws_lambda_function" "scheduler_agent" {
       KAFKA_API_SECRET             = confluent_api_key.cluster-api-key.secret
       SCHEMA_REGISTRY_API_KEY      = confluent_api_key.schema-registry-api-key.id
       SCHEMA_REGISTRY_API_SECRET   = confluent_api_key.schema-registry-api-key.secret
-      SCHEMA_REGISTRY_ENDPOINT     = confluent_schema_registry_cluster.default.rest_endpoint
+      SCHEMA_REGISTRY_ENDPOINT     = data.confluent_schema_registry_cluster.default.rest_endpoint
       scheduler_agent_result_topic = "scheduler_agent_response"
       SNS_ARN                      = aws_sns_topic.gameday_sns_topic.arn
     }
@@ -200,7 +200,7 @@ resource "aws_lambda_function" "search_agent" {
       KAFKA_API_SECRET           = confluent_api_key.cluster-api-key.secret
       SCHEMA_REGISTRY_API_KEY    = confluent_api_key.schema-registry-api-key.id
       SCHEMA_REGISTRY_API_SECRET = confluent_api_key.schema-registry-api-key.secret
-      SCHEMA_REGISTRY_ENDPOINT   = confluent_schema_registry_cluster.default.rest_endpoint
+      SCHEMA_REGISTRY_ENDPOINT   = data.confluent_schema_registry_cluster.default.rest_endpoint
       search_agent_result_topic  = "search_agent_response"
     }
   }

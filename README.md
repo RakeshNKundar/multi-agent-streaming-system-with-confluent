@@ -143,8 +143,22 @@ This architecture includes:
     **⚠️ NOTE:** Please use **US-WEST-2** region for this workshop as some LLM models used in this workshop might not have the same functionalities in other regions. 
 
    
-
 5. ### Setup environment variables
+
+1. Go to the AWS Console and navigate to the Amazon Bedrock service.
+2. On the left hand panel, click on the `Model Access` option
+
+    ![alt text](assets/img/model_access.png)
+3. Click the `Modify Access` button
+
+    ![alt text](assets/img/modify_access.png)
+4. Enable the following models (it is strongly recommended to only enable these models or else enablement will stall and require AWS Support):
+    - Titan Embeddings G1 - Text
+    - Claude 3.5 Haiku
+  
+    It should only take 1-5 minutes for the models to enable. You will see the following when models are ready.
+    ![alt text](assets/img/model_active.png)
+    ![alt text](assets/img/model_active_2.png) 
 
   * Navigate to <b>setup/init.sh</b> and edit the following:
 
@@ -170,58 +184,32 @@ This architecture includes:
   
 
 ## Task 01 – Orchestrator Agent (LLM-based Decision Making)
+In Confluent Cloud, a connection for Apache Flink® represents an external service that your Flink statements can interact with. These connections let you access systems such as databases, APIs, and other services directly from Flink SQL.
 
-You can integrate generative AI directly into your streaming data pipelines using Confluent Cloud’s AI Model Inference feature. This allows you to call large language models (LLMs) directly within Flink SQL. We will now be using this inference feature to implement our orchestration pipeline.
-Learn more: https://docs.confluent.io/cloud/current/ai/ai-model-inference.html
+In our use case, we have set up connections to:
 
+Claude for text generation: `bedrock-text-connection`
 
-1. Go to the AWS Console and navigate to the Amazon Bedrock service.
-2. On the left hand panel, click on the `Model Access` option
+Embed-Titan for embeddings: `bedrock-embed-connection`
 
-    ![alt text](assets/img/model_access.png)
-3. Click the `Modify Access` button
+MongoDB for text and vector search: `mongodb-search-connection`
 
-    ![alt text](assets/img/modify_access.png)
-4. Enable the following models (it is strongly recommended to only enable these models or else enablement will stall and require AWS Support):
-    - Titan Embeddings G1 - Text
-    - Claude 3.5 Haiku
-  
-    It should only take 1-5 minutes for the models to enable. You will see the following when models are ready.
-    ![alt text](assets/img/model_active.png)
-    ![alt text](assets/img/model_active_2.png) 
+1. In the navigation menu, click Environments, and click the tile for the environment where you’re using Flink SQL.
+  - In the navigation menu, click `Integrations`.
+  - Click `Connections`.
 
+The available connections are listed.
+![alt text](assets/img/connections.png)
 
-5. Login to your confluent cloud account to see the different resources deployed on your environment.
-
-6. Navigate to the Environment labeled `confluent_agentic_workshop`
-
-7. Once in the Environment view, click the Integrations tab and create a new Connection. 
-![Creating a connection to Amazon Bedrock](assets/img/integration.png)
-
-8. Select Amazon Bedrock as the service with which to create a connection. ![alt text](assets/img/service_select.png)
-
-9. Fill out the form using following:
-    - Endpoint: `https://bedrock-runtime.<your_region>.amazonaws.com/model/anthropic.claude-3-5-haiku-20241022-v1:0/invoke`
-    - aws access key - <Replace_with_your_own_access_key> 
-    - aws secret key  - <Replace_with_your_own_access_secret_key>
-    - aws session token - <Replace_with_your_own_session_token>
-
-10. Give your connection name of `bedrock-text-connection` and launch the connection. 
-
-    ![alt text](assets/img/name_integration.png)
-
-
-11. Next, navigate to Flink with Confluent Cloud and open your SQL workspace. 
+2. Navigate to Flink with Confluent Cloud and open your SQL workspace. 
 
     ![alt text](assets/img/flink_nav.png)
 
-
-
-12. Run following queries within the SQL workspace you've opened up:
+3. Run following queries within the SQL workspace you've opened up:
 
     ```sql
    CREATE MODEL BedrockGeneralModel INPUT (text STRING) OUTPUT (response STRING) COMMENT 'General model with no system prompt.'
-WITH
+   WITH
     (
         'task' = 'text_generation',
         'provider' = 'bedrock',
@@ -229,106 +217,103 @@ WITH
         'bedrock.PARAMS.temperature' = '0.1',
         'bedrock.connection' = 'bedrock-text-connection'
     );
-
-
     ```
 
     ```sql
     CREATE TABLE `orchestrator_metadata` AS 
-SELECT 
-    JSON_VALUE(response, '$.mongo_agent') AS mongo_agent,
-    JSON_VALUE(response, '$.mongo_agent_metadata.query') AS mongo_agent_query,
-    JSON_VALUE(response, '$.mongo_agent_metadata.user_email') AS mongo_agent_user_email,
-    JSON_VALUE(response, '$.mongo_agent_metadata.employee_id') AS mongo_agent_employee_id,
+    SELECT 
+        JSON_VALUE(response, '$.mongo_agent') AS mongo_agent,
+        JSON_VALUE(response, '$.mongo_agent_metadata.query') AS mongo_agent_query,
+        JSON_VALUE(response, '$.mongo_agent_metadata.user_email') AS mongo_agent_user_email,
+        JSON_VALUE(response, '$.mongo_agent_metadata.employee_id') AS mongo_agent_employee_id,
 
-    JSON_VALUE(response, '$.search_agent') AS search_agent,
-    JSON_VALUE(response, '$.search_agent_metadata.query') AS search_agent_query,
+        JSON_VALUE(response, '$.search_agent') AS search_agent,
+        JSON_VALUE(response, '$.search_agent_metadata.query') AS search_agent_query,
 
-    JSON_VALUE(response, '$.scheduler_agent') AS scheduler_agent,
-    JSON_VALUE(response, '$.scheduler_agent_metadata.title') AS scheduler_title,
-    JSON_VALUE(response, '$.scheduler_agent_metadata.description') AS scheduler_description,
-    JSON_VALUE(response, '$.scheduler_agent_metadata.location') AS scheduler_location,
-    JSON_VALUE(response, '$.scheduler_agent_metadata.start') AS scheduler_start,
-    JSON_VALUE(response, '$.scheduler_agent_metadata.end') AS scheduler_end,
-    JSON_QUERY(response, '$.scheduler_agent_metadata.attendees') AS scheduler_attendees,
-    JSON_QUERY(response, '$.sequence') AS execution_sequence,`timestamp`,
-message_id,user_email,session_id,employee_id,message
-FROM 
-    queries ,
-LATERAL TABLE(
-    ML_PREDICT(
-        'BedrockGeneralModel',(
-            'You are a query router for a multi-agent workplace assistant.
+        JSON_VALUE(response, '$.scheduler_agent') AS scheduler_agent,
+        JSON_VALUE(response, '$.scheduler_agent_metadata.title') AS scheduler_title,
+        JSON_VALUE(response, '$.scheduler_agent_metadata.description') AS scheduler_description,
+        JSON_VALUE(response, '$.scheduler_agent_metadata.location') AS scheduler_location,
+        JSON_VALUE(response, '$.scheduler_agent_metadata.start') AS scheduler_start,
+        JSON_VALUE(response, '$.scheduler_agent_metadata.end') AS scheduler_end,
+        JSON_QUERY(response, '$.scheduler_agent_metadata.attendees') AS scheduler_attendees,
+        JSON_QUERY(response, '$.sequence') AS execution_sequence,`timestamp`,
+    message_id,user_email,session_id,employee_id,message
+    FROM 
+        queries ,
+    LATERAL TABLE(
+        ML_PREDICT(
+            'BedrockGeneralModel',(
+                'You are a query router for a multi-agent workplace assistant.
 
-Given the user input, extract:
+    Given the user input, extract:
 
-1. Which agents are required
-2. A relevant fragment of the query for each agent — do not copy the full query unless necessary
-3. Agent-specific metadata in structured JSON
-4. An execution sequence, if applicable.
+    1. Which agents are required
+    2. A relevant fragment of the query for each agent — do not copy the full query unless necessary
+    3. Agent-specific metadata in structured JSON
+    4. An execution sequence, if applicable.
 
-Descriptions of agents:
+    Descriptions of agents:
 
-* sql\_agent: Handles employee- or department-level data queries from SQL using employee\_id or user\_email.
-* search\_agent: Retrieves top documents or policies using vector search based on semantic meaning.
-* scheduler\_agent: Schedules meetings or creates events using provided attendees, title, and time.
+    * sql\_agent: Handles employee- or department-level data queries from SQL using employee\_id or user\_email.
+    * search\_agent: Retrieves top documents or policies using vector search based on semantic meaning.
+    * scheduler\_agent: Schedules meetings or creates events using provided attendees, title, and time.
 
-Return the result in strict JSON using this structure:
+    Return the result in strict JSON using this structure:
 
-{
-  "mongo_agent": true | false,
-  "mongo_agent_metadata": {
-    "query": "<original message from user>",
-    "user_email": "<original user_email>",
-    "employee_id": "<original employee_id>"
-  },
-
-  "search_agent": true | false,
-  "search_agent_metadata": {
-    "query": "<original message from user>"
-  },
-
-  "scheduler_agent": true | false,
-  "scheduler_agent_metadata": {
-    "title": "Meeting Title",
-    "description": "Purpose of the meeting",
-    "location": "Virtual",
-    "start": "2025-05-06T15:00:00Z",
-    "end": "2025-05-06T16:00:00Z",
-    "attendees": ["<user_email or mentioned email>"]
-  },
-
-  "sequence": ["scheduler_agent", "search_agent", "mongo_agent"]
-}
-
-  
-' || '\n User prompt: ' ||
-            '{
-  message_id: ' || message_id || ','
-  'employee_id: '||  employee_id || ','
-  'user_email:' || user_email || ','
-  'message:'|| message || '}'
-        )
-    )
-);
-    ```
-
-
-13. Navigate to the Topics tab and find the `queries` topic. ![alt text](assets/img/queries_topic.png)
-
-14. Insert a sample query in the `queries` topic to test out our flink agent. 
-
-    ```json
     {
-      "message_id": "d7a97c0a-8e5b-4c65-90cb-7ea5934ae6d4",
-      "employee_id": "E001",
-      "user_email": "john.smith@company.com",
-      "session_id": "sess-01",
-      "message": "What is company's maternal leave policy? How much am I eligible for ?",
-      "timestamp": 1746717000000
+      "mongo_agent": true | false,
+      "mongo_agent_metadata": {
+        "query": "<original message from user>",
+        "user_email": "<original user_email>",
+        "employee_id": "<original employee_id>"
+      },
+
+      "search_agent": true | false,
+      "search_agent_metadata": {
+        "query": "<original message from user>"
+      },
+
+      "scheduler_agent": true | false,
+      "scheduler_agent_metadata": {
+        "title": "Meeting Title",
+        "description": "Purpose of the meeting",
+        "location": "Virtual",
+        "start": "2025-05-06T15:00:00Z",
+        "end": "2025-05-06T16:00:00Z",
+        "attendees": ["<user_email or mentioned email>"]
+      },
+
+      "sequence": ["scheduler_agent", "search_agent", "mongo_agent"]
     }
+
+      
+    ' || '\n User prompt: ' ||
+                '{
+      message_id: ' || message_id || ','
+      'employee_id: '||  employee_id || ','
+      'user_email:' || user_email || ','
+      'message:'|| message || '}'
+            )
+        )
+    );
     ```
-    ![alt text](assets/img/produce.png)
+
+
+    13. Navigate to the Topics tab and find the `queries` topic. ![alt text](assets/img/queries_topic.png)
+
+    14. Insert a sample query in the `queries` topic to test out our flink agent. 
+        ```json
+        {
+          "message_id": "d7a97c0a-8e5b-4c65-90cb-7ea5934ae6d4",
+          "employee_id": "E001",
+          "user_email": "john.smith@company.com",
+          "session_id": "sess-01",
+          "message": "What is company's maternal leave policy? How much am I eligible for ?",
+          "timestamp": 1746717000000
+        }
+        ```
+        ![alt text](assets/img/produce.png)
 
 15. Verify the data exists in the respective topics - **queries** and **orchestrator_metadata**. 
 
@@ -472,19 +457,15 @@ Once the email is verified you'll receive emails about the new events when a sch
 ## Task 04: Employee Context Retrieval via Mongo Search 
 We now navigate to add context to our Research Agent using Amazon Bedrock embeddings.
 
-1. Navigate to the Integrations tab within your environment and create another Connections integration. This time with the the following: 
- - Name: `mongodb-connection` 
+1. Navigate to the Integrations tab within your environment and see another connections integration. This time with the the following: 
+ - Name: `mongodb-search-connection` 
  - Endpoint: `mongodb+srv://multi-agent-workplace-s.<cluster_id>.mongodb.net/workplace_knowledgebase`. 
-
- you can find the endpoint in terraform output section
-    The end result should look like this:
-    ![alt text](assets/img/mongo_integration.png.png)
+ - You can find the endpoint in terraform output section.The end result should look like this:
+  ![alt text](assets/img/mongo_integration.png)
 
 
-2. Navigate back to Flink and run the following queries:
-  
-  Create a Flink SQL table that maps to your employee_collection in MongoDB:
-    ```sql
+2. Navigate back to Flink and run the following queries.Create a Flink SQL table that maps to your employee_collection in MongoDB:
+  ```sql
   CREATE TABLE mongodb_text_search (
   employee_id STRING,
   full_name STRING,
@@ -550,19 +531,18 @@ We now navigate to add context to our Research Agent using Amazon Bedrock embedd
     region STRING,
     time_zone STRING
   >
-) WITH (
+  ) WITH (
   'connector' = 'mongodb',
   'mongodb.connection' = 'mongodb-connection',
   'mongodb.database' = 'workplace_knowledgebase',
   'mongodb.collection' = 'employee_collection',
   'mongodb.index' = 'employee_id_index'
   
-);
-    ```
+  );
+  ```
 
-3. Get search results
-   Take incoming queries from mongo_agent_input and perform a MongoDB text search on the employee_collection. The results are written to the mongo_agent_response sink:
-    
+3. Get search results.Take incoming queries from mongo_agent_input and perform a MongoDB text search on the employee_collection. The results are written to the mongo_agent_response sink:
+
   ```sql
     INSERT INTO mongo_agent_response SELECT CAST(message_id AS BYTES) AS `key`,        
     message_id,
@@ -577,23 +557,18 @@ We now navigate to add context to our Research Agent using Amazon Bedrock embedd
     LATERAL TABLE(
       TEXT_SEARCH_AGG(mongodb_text_search, DESCRIPTOR(employee_id), query, 1)
     );
-    ```
+  ```
 
 4. Verify Results: Check the `mongo_response_topic` Kafka topic to confirm that embeddings are being generated and that MongoDB search results are correctly returned.
-
 
 ## Task 05: Knowledge Context Retrieval via Vector Search 
 We now navigate to add context to our Research Agent using Amazon Bedrock embeddings.
 
-1. Navigate to the Integrations tab within your environment and create another Connections integration. This time with the the following: 
+1. Navigate to the Integrations tab within your environment and see another connections integration. This time with the the following: 
  - Name: `bedrock-embedding-connection` 
  - Endpoint: `https://bedrock-runtime.<your_current_region>.amazonaws.com/model/amazon.titan-embed-text-v1/invoke`. 
- 
-    ![alt text](assets/img/second_integration.png)
-
-
-    The end result should look like this:
-    ![alt text](assets/img/both_integrations.png)
+  
+  ![alt text](assets/img/connections.png)
 
 
 2. Navigate back to Flink and run the following queries:
@@ -633,7 +608,7 @@ Stream mongo_agent_input , search_embeddings and scheduler_agent_input Kafka top
 
 Before creating the connector, make sure the Lambda is properly configured.
 - Open the AWS Console.
-- Search for and open your Lambda function (e.g., mongo_agent).
+- Search for and open your Lambda function (e.g., scheduler_agent).
 - Validate the following environment variables to the function: 
 
 ```bash
@@ -645,45 +620,30 @@ SCHEMA_REGISTRY_API_SECRET=<your-schema-registry-api-secret>
 SCHEMA_REGISTRY_ENDPOINT=https://<your-schema-registry-endpoint>
 TOPIC_NAME=mongo_agent_response
 ```
-Create a Lambda IAM Assume Role Integration
-1. Navigate to the Integrations tab of your environment and click Add Integration. ![alt text](assets/img/assume_role_integration.png)
-2. Select `New role`
-3. Select the `Lambda Sink` option and follow the rest of the integration set up as instructed. When instructed, provide a simple name such as `lambda_iam_assume_role` for the integration.
-![alt text](assets/img/lambda_select.png)
-
-<br> **⚠️ NOTE** : In the permission-policy.json file make sure to include the AWS lambda function's ARN of all 3 agents(mongo_agent, search_agent, schedule_agent) under resource block to allow lambda sink connectors to reuse the same IAM role.
-
-With your Lambda is ready and your IAM Assume Role Integration created, proceed to configure the Confluent-managed Kafka Sink Connector to invoke this function on every message received in mongo_agent_input.
-
 Step-by-step Setup:
 1. Go to Confluent Cloud > Connectors.
 
 2. Select AWS Lambda Sink Connector from the available connectors.
   ![alt text](assets/img/connector_select.png)
 
-3. Select the `mongo_agent_input`, `search_embeddings` , `scheduler_agent_input` topic. Each time a record lands in these topic, the respective Lambda function will get triggered.
+3. Select the `scheduler_agent_input` topic. Each time a record lands in this topic, the respective Lambda function will get triggered.
 
     ![alt text](assets/img/topic_select.png)
 
 4. During the authentication part, be sure you point this connector input topics to the respective lambda functions/agents.
-  1. Set `AWS Lambda function configuration mode` to `multiple`.
-  2. Set `AWS Lambda function name to topic map` value to following topic to agent map.Please make sure to replace the agents with `mongo_agent_<>` ,`scheduler_agent_<>` & `search_agent_<>` with your own   agents that are deployed on aws workspace. Below is a example of topic to lambda function map.
-     ```
-     mongo_agent_input;mongo_agent_<>,scheduler_agent_input;scheduler_agent_<>,search_embeddings;search_agent_<>
-     ```
+    1. Set `AWS Lambda function configuration mode` to `single`.
   
-  ![alt text](assets/img/lambdas.png)
+    ![alt text](assets/img/lambdas.png)
 
-⚠️ **Note:**
-In the **name-to-topic mapping file**, be sure to **replace any `<>` placeholders with the appropriate suffixes**.
-Also the input topic for the `search_agent` should be set to : **`search_embeddings`**.
+    2. In the  `AWS Lambda Function Name ` , enter `scheduler_agent_<your_unique_identifier>. You can get the name by logging into AWS lambda console.
+    3. Use the `Access Keys` as the authentication method. 
+    4. Run the following command in terminal to get aws access keys and secret. 
+    ```shell
+    cat terraform/service_principal_keys.txt
+    ```
+    Enter the access_key and secret in the AWS credentials section and Click on Continue.
 
-
-5. Use the `IAM Roles` as the authentication method. The `Provider Integration` you created earlier is what you select last.
-
-    ![alt text](assets/img/sink_authentication.png)
-
-6. Set the Input Kafka record value format to `AVRO`. Leave all other values as default/empty.
+7. Set the Input Kafka record value format to `AVRO`. Leave all other values as default/empty.
     ![alt text](assets/img/avro.png)
 
 7. Lastly, provide your connector a name of `AgentSinkConnector`
@@ -772,7 +732,6 @@ FROM (
     )
 )
 WHERE row_num = 1;
-
 ```
 Explanation:
 

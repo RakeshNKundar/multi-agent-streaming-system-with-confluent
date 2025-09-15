@@ -1,4 +1,3 @@
-data "confluent_organization" "default" {}
 
 data "confluent_flink_region" "default" {
   cloud  = "AWS"

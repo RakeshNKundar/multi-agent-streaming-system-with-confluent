@@ -140,7 +140,7 @@ resource "mongodbatlas_search_index" "default" {
 
 resource "mongodbatlas_search_index" "employee_id_index" {
   project_id      = mongodbatlas_project.default.id
-  name            = " "
+  name            = "employee_id_index"
   cluster_name    = mongodbatlas_cluster.default.name
   collection_name = local.mongo_workshop_employee_collection
   database        = local.mongo_workshop_database

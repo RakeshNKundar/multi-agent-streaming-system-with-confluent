@@ -1,8 +1,8 @@
 resource "confluent_schema" "Queries" {
   schema_registry_cluster {
-    id = confluent_schema_registry_cluster.default.id
+    id = data.confluent_schema_registry_cluster.default.id
   }
-  rest_endpoint      = confluent_schema_registry_cluster.default.rest_endpoint
+  rest_endpoint      = data.confluent_schema_registry_cluster.default.rest_endpoint
   subject_name       = "queries-value"
   format             = "AVRO"
   schema             = file("../schemas/queries.avsc")
@@ -19,9 +19,9 @@ resource "confluent_schema" "Queries" {
 
 resource "confluent_schema" "mongo_agent_response" {
   schema_registry_cluster {
-    id = confluent_schema_registry_cluster.default.id
+    id = data.confluent_schema_registry_cluster.default.id
   }
-  rest_endpoint      = confluent_schema_registry_cluster.default.rest_endpoint
+  rest_endpoint      = data.confluent_schema_registry_cluster.default.rest_endpoint
   subject_name       = "mongo_agent_response-value"
   format             = "AVRO"
   schema             = file("../schemas/mongo_agent_response.avsc")
@@ -38,9 +38,9 @@ resource "confluent_schema" "mongo_agent_response" {
 
 resource "confluent_schema" "scheduler_agent_response" {
   schema_registry_cluster {
-    id = confluent_schema_registry_cluster.default.id
+    id = data.confluent_schema_registry_cluster.default.id
   }
-  rest_endpoint      = confluent_schema_registry_cluster.default.rest_endpoint
+  rest_endpoint      = data.confluent_schema_registry_cluster.default.rest_endpoint
   subject_name       = "scheduler_agent_response-value"
   format             = "AVRO"
   schema             = file("../schemas/scheduler_agent_response.avsc")
@@ -57,9 +57,9 @@ resource "confluent_schema" "scheduler_agent_response" {
 
 resource "confluent_schema" "search_agent_response" {
   schema_registry_cluster {
-    id = confluent_schema_registry_cluster.default.id
+    id = data.confluent_schema_registry_cluster.default.id
   }
-  rest_endpoint      = confluent_schema_registry_cluster.default.rest_endpoint
+  rest_endpoint      = data.confluent_schema_registry_cluster.default.rest_endpoint
   subject_name       = "search_agent_response-value"
   format             = "AVRO"
   schema             = file("../schemas/search_agent_response.avsc")
