@@ -6,7 +6,9 @@ resource "confluent_service_account" "default" {
 
 resource "confluent_environment" "default" {
   display_name = "confluent_agentic_workshop_${random_string.random.id}"
-
+  stream_governance {
+    package = "ESSENTIALS"
+  }
   lifecycle {
     prevent_destroy = false
   }
@@ -27,6 +29,12 @@ resource "confluent_kafka_cluster" "default" {
     prevent_destroy = false
   }
 }
+# data "confluent_schema_registry_cluster" "default" {
+#   environment {
+#     id = confluent_environment.default.id
+#   }
+# }
+
 
 resource "confluent_role_binding" "cluster-admin" {
   principal   = "User:${confluent_service_account.default.id}"

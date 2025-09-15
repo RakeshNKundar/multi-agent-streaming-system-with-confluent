@@ -2,7 +2,7 @@ terraform {
   required_providers {
     confluent = {
       source  = "confluentinc/confluent"
-      version = "1.76.0"
+      version = "2.39.0"
     }
     mongodbatlas = {
       source  = "mongodb/mongodbatlas"
@@ -46,3 +46,6 @@ data "confluent_ip_addresses" "default" {
   }
 }
 
+data "confluent_organization" "default" {}
+
+data "aws_caller_identity" "current" {}

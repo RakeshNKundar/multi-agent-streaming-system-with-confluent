@@ -30,7 +30,7 @@
     },
     {
       "doc": "Extracted context information as a string",
-      "name": "sql_result",
+      "name": "mongo_result",
       "type": "string"
     },
     {
@@ -48,7 +48,7 @@
       ]
     }
   ],
-  "name": "sql_result",
+  "name": "mongo_result",
   "namespace": "com.hr.assistant.schemas",
   "type": "record"
 }

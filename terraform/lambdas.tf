@@ -9,12 +9,12 @@ resource "aws_s3_bucket" "lambda_layers" {
   force_destroy = true
 }
 
-resource "aws_s3_object" "sql_agent_layer_zip" {
-  bucket = aws_s3_bucket.lambda_layers.bucket
-  key    = "layers/sql_agent_layer.zip"
-  source = "../agents/sql_agent/artifacts/sql_agent_layer.zip"
-  etag   = filemd5("../agents/sql_agent/artifacts/sql_agent_layer.zip")
-}
+# resource "aws_s3_object" "mongo_agent_layer_zip" {
+#   bucket = aws_s3_bucket.lambda_layers.bucket
+#   key    = "layers/mongo_agent_layer.zip"
+#   source = "../agents/mongo_agent/artifacts/mongo_agent_layer.zip"
+#   etag   = filemd5("../agents/mongo_agent/artifacts/mongo_agent_layer.zip")
+# }
 
 resource "aws_s3_object" "scheduler_agent_layer_zip" {
   bucket = aws_s3_bucket.lambda_layers.bucket
@@ -49,13 +49,13 @@ resource "aws_iam_role" "lambda_exec_role" {
   })
 }
 
-resource "aws_lambda_layer_version" "sql_agent_layer" {
-  layer_name          = "sql_agent_layer_${random_string.random.id}"
-  compatible_runtimes = ["python3.12"]
-  s3_bucket           = aws_s3_bucket.lambda_layers.bucket
-  s3_key              = aws_s3_object.sql_agent_layer_zip.key
-  description         = "sql_agent_layer 1"
-}
+# resource "aws_lambda_layer_version" "mongo_agent_layer" {
+#   layer_name          = "mongo_agent_layer_${random_string.random.id}"
+#   compatible_runtimes = ["python3.12"]
+#   s3_bucket           = aws_s3_bucket.lambda_layers.bucket
+#   s3_key              = aws_s3_object.mongo_agent_layer_zip.key
+#   description         = "mongo_agent_layer 1"
+# }
 
 resource "aws_lambda_layer_version" "scheduler_agent_layer" {
   layer_name          = "scheduler_agent_layer_${random_string.random.id}"
@@ -88,11 +88,11 @@ resource "aws_iam_role_policy_attachment" "sns_access" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSNSFullAccess"
 }
 
-data "archive_file" "sql_agent_lambda" {
-  type        = "zip"
-  source_dir  = "../agents/sql_agent/source_code/"
-  output_path = "../agents/sql_agent/artifacts/sql_agent_lambda.zip"
-}
+# data "archive_file" "mongo_agent_lambda" {
+#   type        = "zip"
+#   source_dir  = "../agents/mongo_agent/source_code/"
+#   output_path = "../agents/mongo_agent/artifacts/mongo_agent_lambda.zip"
+# }
 
 
 data "archive_file" "scheduler_agent_lambda" {
@@ -107,36 +107,36 @@ data "archive_file" "search_agent_lambda" {
   output_path = "../agents/search_agent/artifacts/search_agent_lambda.zip"
 }
 
-resource "aws_lambda_function" "sql_agent" {
-  function_name = "sql_agent_${random_string.random.id}"
-  role          = aws_iam_role.lambda_exec_role.arn
-  handler       = "main.lambda_handler"
-  runtime       = "python3.12"
-  timeout       = 900
-  memory_size   = 10240
-  ephemeral_storage {
-    size = 10240
-  }
-  filename         = data.archive_file.sql_agent_lambda.output_path
-  source_code_hash = filebase64sha256(data.archive_file.sql_agent_lambda.output_path)
-  layers           = [aws_lambda_layer_version.sql_agent_layer.arn]
-  environment {
-    variables = {
-      BOOTSTRAP_ENDPOINT         = confluent_kafka_cluster.default.bootstrap_endpoint
-      KAFKA_API_KEY              = confluent_api_key.cluster-api-key.id
-      KAFKA_API_SECRET           = confluent_api_key.cluster-api-key.secret
-      SCHEMA_REGISTRY_API_KEY    = confluent_api_key.schema-registry-api-key.id
-      SCHEMA_REGISTRY_API_SECRET = confluent_api_key.schema-registry-api-key.secret
-      SCHEMA_REGISTRY_ENDPOINT   = confluent_schema_registry_cluster.default.rest_endpoint
-      sql_agent_result_topic     = "sql_agent_response"
-    }
-  }
-}
+# resource "aws_lambda_function" "mongo_agent" {
+#   function_name = "mongo_agent_${random_string.random.id}"
+#   role          = aws_iam_role.lambda_exec_role.arn
+#   handler       = "main.lambda_handler"
+#   runtime       = "python3.12"
+#   timeout       = 900
+#   memory_size   = 10240
+#   ephemeral_storage {
+#     size = 10240
+#   }
+#   filename         = data.archive_file.mongo_agent_lambda.output_path
+#   source_code_hash = filebase64sha256(data.archive_file.mongo_agent_lambda.output_path)
+#   layers           = [aws_lambda_layer_version.mongo_agent_layer.arn]
+#   environment {
+#     variables = {
+#       BOOTSTRAP_ENDPOINT         = confluent_kafka_cluster.default.bootstrap_endpoint
+#       KAFKA_API_KEY              = confluent_api_key.cluster-api-key.id
+#       KAFKA_API_SECRET           = confluent_api_key.cluster-api-key.secret
+#       SCHEMA_REGISTRY_API_KEY    = confluent_api_key.schema-registry-api-key.id
+#       SCHEMA_REGISTRY_API_SECRET = confluent_api_key.schema-registry-api-key.secret
+#       SCHEMA_REGISTRY_ENDPOINT   = data.confluent_schema_registry_cluster.default.rest_endpoint
+#       mongo_agent_result_topic   = "mongo_agent_response"
+#     }
+#   }
+# }
 
-resource "aws_cloudwatch_log_group" "lambda_log_group_sql_agent" {
-  name              = "/aws/lambda/${aws_lambda_function.sql_agent.function_name}"
-  retention_in_days = 14
-}
+# resource "aws_cloudwatch_log_group" "lambda_log_group_mongo_agent" {
+#   name              = "/aws/lambda/${aws_lambda_function.mongo_agent.function_name}"
+#   retention_in_days = 14
+# }
 
 resource "aws_sns_topic" "gameday_sns_topic" {
   name = "gameday-sns-topic-new_${random_string.random.id}"
@@ -162,7 +162,7 @@ resource "aws_lambda_function" "scheduler_agent" {
       KAFKA_API_SECRET             = confluent_api_key.cluster-api-key.secret
       SCHEMA_REGISTRY_API_KEY      = confluent_api_key.schema-registry-api-key.id
       SCHEMA_REGISTRY_API_SECRET   = confluent_api_key.schema-registry-api-key.secret
-      SCHEMA_REGISTRY_ENDPOINT     = confluent_schema_registry_cluster.default.rest_endpoint
+      SCHEMA_REGISTRY_ENDPOINT     = data.confluent_schema_registry_cluster.default.rest_endpoint
       scheduler_agent_result_topic = "scheduler_agent_response"
       SNS_ARN                      = aws_sns_topic.gameday_sns_topic.arn
     }
@@ -200,7 +200,7 @@ resource "aws_lambda_function" "search_agent" {
       KAFKA_API_SECRET           = confluent_api_key.cluster-api-key.secret
       SCHEMA_REGISTRY_API_KEY    = confluent_api_key.schema-registry-api-key.id
       SCHEMA_REGISTRY_API_SECRET = confluent_api_key.schema-registry-api-key.secret
-      SCHEMA_REGISTRY_ENDPOINT   = confluent_schema_registry_cluster.default.rest_endpoint
+      SCHEMA_REGISTRY_ENDPOINT   = data.confluent_schema_registry_cluster.default.rest_endpoint
       search_agent_result_topic  = "search_agent_response"
     }
   }

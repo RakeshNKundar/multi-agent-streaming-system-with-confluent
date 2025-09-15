@@ -216,12 +216,24 @@ def ensure_list_of_strings(value):
     # Case 1: Already a list of strings
     if isinstance(value, list) and all(isinstance(item, str) for item in value):
         return value
-    # Case 2: List with one item that's a JSON-encoded list of strings
-    elif isinstance(value, list) and len(value) == 1 and isinstance(value[0], str):
+
+    # Case 2: Single string that is JSON-encoded list
+    if isinstance(value, list) and len(value) == 1 and isinstance(value[0], str):
         try:
             parsed = json.loads(value[0])
             if isinstance(parsed, list) and all(isinstance(item, str) for item in parsed):
                 return parsed
         except json.JSONDecodeError:
             pass
-    raise ValueError("Input is not or cannot be converted to a list of strings.")
+
+    # Case 3: Plain string → wrap it into a list
+    if isinstance(value, str):
+        return [value]
+
+    # Case 4: None or empty → return empty list
+    if value is None:
+        return []
+
+    raise ValueError(f"Input is not or cannot be converted to a list of strings. Got: {repr(value)}")
+
+
