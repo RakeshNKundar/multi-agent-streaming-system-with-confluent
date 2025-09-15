@@ -533,11 +533,10 @@ We now navigate to add context to our Research Agent using Amazon Bedrock embedd
   >
   ) WITH (
   'connector' = 'mongodb',
-  'mongodb.connection' = 'mongodb-connection',
+  'mongodb.connection' = 'mongodb-search-connection',
   'mongodb.database' = 'workplace_knowledgebase',
   'mongodb.collection' = 'employee_collection',
   'mongodb.index' = 'employee_id_index'
-  
   );
   ```
 
@@ -579,7 +578,7 @@ We now navigate to add context to our Research Agent using Amazon Bedrock embedd
     INPUT (text STRING)
     OUTPUT (response ARRAY<FLOAT>)
     WITH (
-      'bedrock.connection'='bedrock-embedding-connection',
+      'bedrock.connection'='bedrock-embed-connection',
       'bedrock.input_format'='AMAZON-TITAN-EMBED',
       'provider'='bedrock',
       'task'='embedding'
@@ -600,6 +599,52 @@ We now navigate to add context to our Research Agent using Amazon Bedrock embedd
     ```
 
 4. Verify embeddings being generated in `search_embeddings` topics.
+
+5. Connect to MongoDB Atlas Vector Store
+
+    ```sql
+    CREATE TABLE mongodb_vector (
+      policyId STRING,
+      title STRING,
+      region STRING,
+      category STRING,
+      lastUpdated STRING, 
+      content STRING , 
+    contentEmbedding ARRAY<FLOAT>
+    ) WITH (
+    'connector' = 'mongodb',
+    'mongodb.connection' = 'mongodb-search-connection',
+    'mongodb.database' = 'workplace_knowledgebase',
+    'mongodb.collection' = 'knowledge_collection',
+    'mongodb.index' = 'knowledge_index',
+    'mongodb.numcandidates' = '100'
+    );
+    ```
+6. Perform Vector Search to Retrieve Results
+
+  ```sql
+  CREATE TABLE `search_agent_response` AS
+  SELECT
+    query,
+    message_id,
+    employee_id,
+    user_email,
+    message,
+    session_id,
+    `timestamp`,
+    CONCAT(
+      'policyId: ', IF(search_results[1].`policyId` IS NOT NULL, search_results[1].`policyId`, 'UNKNOWN'), '; ',
+      'title: ', IF(search_results[1].`title` IS NOT NULL, search_results[1].`title`, 'No Title'), '; ',
+      'region: ', IF(search_results[1].`region` IS NOT NULL, search_results[1].`region`, 'Unspecified'), '; ',
+      'category: ', IF(search_results[1].`category` IS NOT NULL, search_results[1].`category`, 'General'), '; ',
+      'lastUpdated: ', IF(search_results[1].`lastUpdated` IS NOT NULL, CAST(search_results[1].`lastUpdated` AS STRING), '1970-01-01'), '; ',
+      'content: ', IF(search_results[1].`content` IS NOT NULL, search_results[1].`content`, 'No content available.')
+    ) AS search_result_summary
+  FROM search_embeddings,
+    LATERAL TABLE(
+      VECTOR_SEARCH_AGG(mongodb_vector, DESCRIPTOR(contentEmbedding), search_embeddings.query_embedding,1)
+    ) AS T(search_results);
+  ```
 
 ## Task 05: Integrate Agents with Lambda Sink Connector
 This task helps you build a fully managed Lambda Kafka Sink Connector that routes your queries to all the lambda agents(SQL, Scheduler & Search).
@@ -793,8 +838,6 @@ LATERAL TABLE(
     'Scheduler Agent Triggered: ' || scheduler_agent || '\n' ||
     'Meeting Title: ' ||  IFNULL(scheduler_title, 'none') || '\n' ||
     'Description: ' ||  IFNULL(scheduler_description, 'none') || '\n' ||
-
-    'Execution Sequence: ' || CAST(IFNULL(execution_sequence, ARRAY['none']) AS VARCHAR) || '\n\n' ||
 
     'Generate a complete, professional answer below:\n'
   )

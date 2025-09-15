@@ -16,7 +16,7 @@ resource "aws_iam_user_policy" "lambda_invoke_policy" {
     Statement = [
       {
         Effect   = "Allow"
-        Action   = ["lambda:InvokeFunction"]
+        Action   = ["lambda:InvokeFunction", "lambda:GetFunction"]
         Resource = format("arn:aws:lambda:%s:%s:function:*", data.aws_region.current.name, data.aws_caller_identity.current.account_id)
       }
     ]
