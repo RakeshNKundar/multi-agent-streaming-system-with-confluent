@@ -53,9 +53,7 @@ This architecture includes:
       
 
     - *AWS Account Access*
-      - If you are attending In Person - [In Person AI Day APAC - AWS Workshop Studio Access](https://docs.google.com/spreadsheets/d/1JSjBRoDWGc5WTDtUmrWr2ZjxFL2xBmVi4N4c_ZUPQhU/edit?usp=sharing)
-      - If you are attending virtually - [Virtual AI Day APAC - AWS Workshop Studio Access](https://docs.google.com/spreadsheets/d/1NX8iiLEqwTenRb47v-3REVBulNeG-IJ8lLdqWQtH2uI/edit?gid=468352350#gid=468352350) 
-
+      - Will be shared with you by your workshop co-ordinator.
 
 - **Local Software Requirements:** 
     - [Python3 > 3.9](https://www.python.org/downloads/)
