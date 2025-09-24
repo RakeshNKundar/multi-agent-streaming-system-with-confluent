@@ -206,7 +206,7 @@ The available connections are listed.
 
 3. Run following queries within the SQL workspace you've opened up:
 
-    ```sql
+   ```sql
    CREATE MODEL BedrockGeneralModel INPUT (text STRING) OUTPUT (response STRING) COMMENT 'General model with no system prompt.'
    WITH
     (
@@ -225,10 +225,10 @@ The available connections are listed.
         JSON_VALUE(response, '$.mongo_agent_metadata.query') AS mongo_agent_query,
         JSON_VALUE(response, '$.mongo_agent_metadata.user_email') AS mongo_agent_user_email,
         JSON_VALUE(response, '$.mongo_agent_metadata.employee_id') AS mongo_agent_employee_id,
-
+    
         JSON_VALUE(response, '$.search_agent') AS search_agent,
         JSON_VALUE(response, '$.search_agent_metadata.query') AS search_agent_query,
-
+    
         JSON_VALUE(response, '$.scheduler_agent') AS scheduler_agent,
         JSON_VALUE(response, '$.scheduler_agent_metadata.title') AS scheduler_title,
         JSON_VALUE(response, '$.scheduler_agent_metadata.description') AS scheduler_description,
@@ -244,22 +244,29 @@ The available connections are listed.
         ML_PREDICT(
             'BedrockGeneralModel',(
                 'You are a query router for a multi-agent workplace assistant.
-
+    
     Given the user input, extract:
-
+    
     1. Which agents are required
     2. A relevant fragment of the query for each agent — do not copy the full query unless necessary
     3. Agent-specific metadata in structured JSON
     4. An execution sequence, if applicable.
-
+    
     Descriptions of agents:
-
-    * mongo\_agent: Handles employee- or department-level data queries from mongo using employee\_id or user\_email.
-    * search\_agent: Retrieves top documents or policies using vector search based on semantic meaning.
-    * scheduler\_agent: Schedules meetings or creates events using provided attendees, title, and time.
-
+    
+    mongo_agent: Retrieves employee-specific or department-specific information stored in MongoDB collections. This includes details like:
+    Personal info: full_name, email, phone
+    Job info: job_title, job_level, manager_name, employment_type, status
+    Work info: work_location, skills, projects, performance_reviews
+    Compensation & benefits: compensation, benefits, tenure_years, last_promotion_date, next_eligible_promotion
+    Trigger this agent if the user’s query requires employee or department data.
+    
+    search_agent: Searches and retrieves the most relevant documents, policies, guidelines, or resources using semantic vector search. It is designed for queries where users seek general company information, documentation, or knowledge that is not specific to any individual employee, such as leave policies, HR procedures, or operational manuals. 
+    
+    scheduler_agent: Creates or updates calendar events, schedules meetings, or sends invitations using provided attendees, meeting title, description, location, and start/end times. Trigger only if the user request involves planning or scheduling activities.
+    
     Return the result in strict JSON using this structure:
-
+    
     {
       "mongo_agent": true | false,
       "mongo_agent_metadata": {
@@ -267,12 +274,12 @@ The available connections are listed.
         "user_email": "<original user_email>",
         "employee_id": "<original employee_id>"
       },
-
+    
       "search_agent": true | false,
       "search_agent_metadata": {
         "query": "<original message from user>"
       },
-
+    
       "scheduler_agent": true | false,
       "scheduler_agent_metadata": {
         "title": "Meeting Title",
@@ -282,10 +289,10 @@ The available connections are listed.
         "end": "2025-05-06T16:00:00Z",
         "attendees": ["<user_email or mentioned email>"]
       },
-
+    
       "sequence": ["scheduler_agent", "search_agent", "mongo_agent"]
     }
-
+    
       
     ' || '\n User prompt: ' ||
                 '{
