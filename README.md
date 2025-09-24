@@ -692,8 +692,7 @@ Step-by-step Setup:
 
 7. Lastly, provide your connector a name of `AgentSinkConnector`
 
-8. Verify the responses in respective response topics.
-[alt text](assets/img/verify_response.png)
+8. Verify the response in respective `scheduler_agent_response` topic.
 
 
 ## Task 07 – Final Agent Builder Join & response input Structuring
