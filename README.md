@@ -2,13 +2,13 @@
 
 Welcome to the workshop on building a **Multi-Agent System for Workplace Engagement** using **Apache Kafka**, **Apache Flink**, and **Amazon Bedrock**. In this workshop, you'll learn to orchestrate multiple intelligent agents that collaborate to handle real-world workplace queries like scheduling meetings, retrieving company data, or answering knowledge base questions.
 
----
+----
 
 ## 📘 Overview
 
 This project demonstrates how to build an LLM-powered multi-agent system for workplace engagement. It combines real-time streaming (Flink), event-driven architecture (Kafka), vector search, and Generative AI (Amazon Bedrock) to enable interactive workflows such as:
 
-- Querying company/employee data from SQL databases
+- Querying company/employee data from mongo databases
 - Searching context from internal documents using embeddings
 - Executing tasks like scheduling and sending emails using automation agents
 
@@ -22,7 +22,7 @@ Participants will walk away with hands-on experience building a scalable and fau
 
 This architecture includes:
 - **Orchestrator Agent**: Uses Bedrock LLM to decide which agents to invoke based on incoming user queries.
-- **Query Agent**: Fetches data from relational databases (SQL).
+- **Query Agent**: Fetches data from relational databases (mongo).
 - **Research Agent**: Searches company documents using vector search and embeddings.
 - **Task Agent**: Performs action-oriented tasks like scheduling meetings , reminders and events via sns.
 - **Final Response Builder**: Joins all agent results and converts structured data into a final natural language response.
@@ -35,7 +35,7 @@ This architecture includes:
 - **Apache Flink** – Real-time stream processing & orchestrator logic
 - **Amazon Bedrock** – Foundation model for prompt routing and response generation
 - **AWS Lambda** – Task & query handler functions
-- **PostgreSQL** – SQL data store
+- **MongoDB** – Mongo data store
 - **Mongo Vector DB** – Semantic search engine
 - **LangChain / Custom Agents** – Agent interfaces
 
@@ -53,9 +53,7 @@ This architecture includes:
       
 
     - *AWS Account Access*
-      - If you are attending In Person - [In Person AI Day APAC - AWS Workshop Studio Access](https://docs.google.com/spreadsheets/d/1JSjBRoDWGc5WTDtUmrWr2ZjxFL2xBmVi4N4c_ZUPQhU/edit?usp=sharing)
-      - If you are attending virtually - [Virtual AI Day APAC - AWS Workshop Studio Access](https://docs.google.com/spreadsheets/d/1NX8iiLEqwTenRb47v-3REVBulNeG-IJ8lLdqWQtH2uI/edit?gid=468352350#gid=468352350) 
-
+      - Will be shared with you by your workshop co-ordinator.
 
 - **Local Software Requirements:** 
     - [Python3 > 3.9](https://www.python.org/downloads/)
@@ -63,6 +61,13 @@ This architecture includes:
     - [Confluent Cloud CLI](https://docs.confluent.io/confluent-cli/current/install.html)
     - [MongoDB Database Tools](https://www.mongodb.com/docs/database-tools/installation/)
     
+    ### Clone the workshop Github Repo on your local
+    ```bash
+    git clone https://github.com/RakeshNKundar/multi-agent-streaming-system-with-confluent.git
+    ```
+   
+    ###  Install dependencies
+    You can either install the required tools manually (links above) or run the provided setup script:
     ```bash
     chmod +x ./setup/install_dependencies.sh
     ./setup/install_dependencies.sh
@@ -80,21 +85,14 @@ This architecture includes:
         <p><img src="assets/img/questions.png" alt="questions" width="300" /></p>
     - Click on "Next" to create a cluster and enter promo code details.
         <p><img src="assets/img/cluster.png" alt="cluster" width="300" /></p>
-    - Please click on the "click_here" link on the UI to enter a promo code.
-        <p><img src="assets/img/paywall.png" alt="paywall" width="300" /></p>
-    - Enter the promo code : CONFLUENTDEV1
-        <p><img src="assets/img/promo.png" alt="promo" width="300" /></p>
+    - Entering your credit card details and receive $400 in free credits.
+    
 
 ---
 
 ## 🚀 Quick Start (TL;DR)
 
-1. ### Clone the workshop Github Repo on your local
-    ```bash
-    git clone https://github.com/RakeshNKundar/multi-agent-streaming-system-with-confluent.git
-    ```
-
-2. ### Create a Confluent Cloud API Key
+1. ### Create a Confluent Cloud API Key
     Create Confluent Cloud API Key for your confluent cloud account with resource scope as Cloud resource management.
     - Go to https://confluent.cloud/settings/api-keys
     - Click on My Account (Make sure you have Organization Admin RBAC role)
@@ -105,7 +103,7 @@ This architecture includes:
     <p><img src="assets/img/apikey.png" alt="nim" width="300" /></p>
 
 
-3. ### Create a MongoDB Programmatic Access API Key
+2. ### Create a MongoDB Programmatic Access API Key
     Get the MongoDB Atlas Organization ID - https://cloud.mongodb.com/v2/
     - Click on the ORGANIZATON <br>
       <p><img src="assets/img/mongo_organization.png" alt="nim"" /></p> <br>
@@ -122,7 +120,7 @@ This architecture includes:
     * Save the API Key for further use.
       <p><img src="assets/img/apikeymongo.png" alt="nim" width="300" /></p>
 
-4. ### Retrieve your AWS Access Keys from a Confluent-provided AWS account
+3. ### Retrieve your AWS Access Keys from a Confluent-provided AWS account
     If an AWS account is being provided to you for this workshop, follow the below instructions. 
     * Navigate to https://catalog.us-east-1.prod.workshops.aws/event/dashboard
     * Sign in using the `Email One Time Password` option. 
@@ -169,6 +167,7 @@ This architecture includes:
     export TF_VAR_cc_cloud_api_secret="<Confluent Cloud API Secret>"
     export TF_VAR_mongodbatlas_public_key="<MongoDB Public API Key>"
     export TF_VAR_mongodbatlas_private_key="<MongoDB Private API Key>"
+    export TF_VAR_mongodb_atlas_org_id="<MongoDB Atlas Org ID>"
     export AWS_DEFAULT_REGION="us-west-2" #If using a Confluent-provided AWS account, make sure this region matches the region found in the above steps (most likely it will be us-west-2)
     export AWS_ACCESS_KEY_ID="<AWS Access Key ID"
     export AWS_SECRET_ACCESS_KEY="<AWS Access Key Secret>"
@@ -207,7 +206,7 @@ The available connections are listed.
 
 3. Run following queries within the SQL workspace you've opened up:
 
-    ```sql
+   ```sql
    CREATE MODEL BedrockGeneralModel INPUT (text STRING) OUTPUT (response STRING) COMMENT 'General model with no system prompt.'
    WITH
     (
@@ -226,10 +225,10 @@ The available connections are listed.
         JSON_VALUE(response, '$.mongo_agent_metadata.query') AS mongo_agent_query,
         JSON_VALUE(response, '$.mongo_agent_metadata.user_email') AS mongo_agent_user_email,
         JSON_VALUE(response, '$.mongo_agent_metadata.employee_id') AS mongo_agent_employee_id,
-
+    
         JSON_VALUE(response, '$.search_agent') AS search_agent,
         JSON_VALUE(response, '$.search_agent_metadata.query') AS search_agent_query,
-
+    
         JSON_VALUE(response, '$.scheduler_agent') AS scheduler_agent,
         JSON_VALUE(response, '$.scheduler_agent_metadata.title') AS scheduler_title,
         JSON_VALUE(response, '$.scheduler_agent_metadata.description') AS scheduler_description,
@@ -245,22 +244,29 @@ The available connections are listed.
         ML_PREDICT(
             'BedrockGeneralModel',(
                 'You are a query router for a multi-agent workplace assistant.
-
+    
     Given the user input, extract:
-
+    
     1. Which agents are required
     2. A relevant fragment of the query for each agent — do not copy the full query unless necessary
     3. Agent-specific metadata in structured JSON
     4. An execution sequence, if applicable.
-
+    
     Descriptions of agents:
-
-    * sql\_agent: Handles employee- or department-level data queries from SQL using employee\_id or user\_email.
-    * search\_agent: Retrieves top documents or policies using vector search based on semantic meaning.
-    * scheduler\_agent: Schedules meetings or creates events using provided attendees, title, and time.
-
+    
+    mongo_agent: Retrieves employee-specific or department-specific information stored in MongoDB collections. This includes details like:
+    Personal info: full_name, email, phone
+    Job info: job_title, job_level, manager_name, employment_type, status
+    Work info: work_location, skills, projects, performance_reviews
+    Compensation & benefits: compensation, benefits, tenure_years, last_promotion_date, next_eligible_promotion
+    Trigger this agent if the user’s query requires employee or department data.
+    
+    search_agent: Searches and retrieves the most relevant documents, policies, guidelines, or resources using semantic vector search. It is designed for queries where users seek general company information, documentation, or knowledge that is not specific to any individual employee, such as leave policies, HR procedures, or operational manuals. 
+    
+    scheduler_agent: Creates or updates calendar events, schedules meetings, or sends invitations using provided attendees, meeting title, description, location, and start/end times. Trigger only if the user request involves planning or scheduling activities.
+    
     Return the result in strict JSON using this structure:
-
+    
     {
       "mongo_agent": true | false,
       "mongo_agent_metadata": {
@@ -268,12 +274,12 @@ The available connections are listed.
         "user_email": "<original user_email>",
         "employee_id": "<original employee_id>"
       },
-
+    
       "search_agent": true | false,
       "search_agent_metadata": {
         "query": "<original message from user>"
       },
-
+    
       "scheduler_agent": true | false,
       "scheduler_agent_metadata": {
         "title": "Meeting Title",
@@ -283,10 +289,10 @@ The available connections are listed.
         "end": "2025-05-06T16:00:00Z",
         "attendees": ["<user_email or mentioned email>"]
       },
-
+    
       "sequence": ["scheduler_agent", "search_agent", "mongo_agent"]
     }
-
+    
       
     ' || '\n User prompt: ' ||
                 '{
@@ -320,14 +326,14 @@ The available connections are listed.
 16. Click the record in the `orchestrator_metadata` topic to view the field values. Take a look at the agent flags and observe which are true for the input we have given. ![alt text](assets/img/message_check.png)
 
 17. Try It Yourself ✏️:
-    1. How would you change the prompt to include the SQL agent for being called?
+    1. How would you change the prompt to include the mongo agent for being called?
     2. What metadata is required for the scheduler agent?
     3. Publish one more query containing “schedule a 1:1 with my manager <your email> ”, which agents will be invoked now?
 
 ## Task 02: Setup the Workflow distribution 
 Now that the Orchestrator Agent is up and running, it's time to activate the specialized agents that perform actual tasks.🧩 Concept Recap
 Each agent is an independent component in the system. Here's a quick breakdown:<br>
-🗄 SQL Agent: Retrieves employee or department-level data using employee_id or user_email from a SQL database.<br>
+🗄 mongo Agent: Retrieves employee or department-level data using employee_id or user_email from a mongo database.<br>
 🔎 Vector Search Agent: Uses semantic embeddings to retrieve contextually relevant documents from a MongoDB Vector Store.<br>
 📅 Scheduler Agent: Automates meeting scheduling using structured metadata like title, time, and attendees.<br>
 
@@ -336,7 +342,7 @@ These agents listen on their respective Kafka input topics and output results to
 So we now create three router queries which routes the message to it's repective agent inputs. 
 
 
-🔹 SQL Agent Routing 
+🔹 mongo Agent Routing 
 Can you add the flag condition which will help us determine routing the request to mongo_agent_input ?
 ```sql
 CREATE TABLE mongo_agent_input AS 
@@ -398,7 +404,7 @@ Verify the data in the respective topics - **mongo_agent_input**, **search_agent
 👉 Next Step:
 Create a few test queries that would intentionally route to each of these agents. For example:
 
-"How many employees are based in North America like me?" → SQL Agent
+"How many employees are based in North America like me?" → mongo Agent
 ```json
 {
   "message_id": "6f0e8192-9a14-49a7-9a22-6fc324d7d4co",
@@ -646,8 +652,8 @@ We now navigate to add context to our Research Agent using Amazon Bedrock embedd
     ) AS T(search_results);
   ```
 
-## Task 05: Integrate Agents with Lambda Sink Connector
-This task helps you build a fully managed Lambda Kafka Sink Connector that routes your queries to all the lambda agents(SQL, Scheduler & Search).
+## Task 06: Integrate Agents with Lambda Sink Connector
+This task helps you build a fully managed Lambda Kafka Sink Connector that routes your queries to all the lambda agents(mongo, Scheduler & Search).
 Goal:
 Stream mongo_agent_input , search_embeddings and scheduler_agent_input Kafka topics data directly to their respective AWS Lambda Agents.
 
@@ -693,12 +699,11 @@ Step-by-step Setup:
 
 7. Lastly, provide your connector a name of `AgentSinkConnector`
 
-8. Verify the responses in respective response topics.
-[alt text](assets/img/verify_response.png)
+8. Verify the response in respective `scheduler_agent_response` topic.
 
 
-## Task 06 – Final Agent Builder Join & response input Structuring
-Now that all three agents (SQL, Search, Scheduler) have emitted results, we perform a final conditional join with the orchestrator metadata. This gives us a fully enriched context for each user query.
+## Task 07 – Final Agent Builder Join & response input Structuring
+Now that all three agents (mongo, Search, Scheduler) have emitted results, we perform a final conditional join with the orchestrator metadata. This gives us a fully enriched context for each user query.
 
 🔹 Step 1: Join All Agent Results
 This query joins orchestrator_metadata with the three agent response topics conditionally, based on which agents were triggered (mongo_agent, search_agent, scheduler_agent).
@@ -788,7 +793,7 @@ Explanation:
 
 NOTE: You can find more information about Flink Window aggregations & joins [here](https://docs.confluent.io/cloud/current/flink/reference/queries/window-tvf.html).
 
-## Task 07 – Final Response Generation (Natural Language)
+## Task 08 – Final Response Generation (Natural Language)
 Once all agent responses are joined and filtered into a clean stream (final_response_builder), we use a Bedrock LLM to formulate a natural language answer. This is the final response a user would see in Slack, email, or a chatbot.
 
 🔹 Step 1: Create a model instance for Final response generator
@@ -829,8 +834,8 @@ LATERAL TABLE(
     '---' || '\n' ||
     'Original message: ' || message || '\n\n' ||
 
-    'SQL Agent Triggered: ' || mongo_agent || '\n' ||
-    'Employee/Department Level Info Result obtained from SQL agent: ' ||  IFNULL(employee_info, 'none') || '\n\n' ||
+    '<ongo Agent Triggered: ' || mongo_agent || '\n' ||
+    'Employee/Department Level Info Result obtained from Mongo agent: ' ||  IFNULL(employee_info, 'none') || '\n\n' ||
 
     'Search Agent Triggered: ' || search_agent || '\n' ||
     'Search Result: ' || IFNULL(additional_context, 'none') || '\n\n' ||
@@ -848,7 +853,7 @@ If you're not seeing responses in the final joined topic or the watermark is lag
 
 Below are some sample messages. You can copy and publish them directly to your `queries` topic.
 
-"Can I extend coverage of my healthcare benefits to family members?" → SQL Agent
+"Can I extend coverage of my healthcare benefits to family members?" → mongo Agent
 ```json
 {
   "message_id": "6f0e8192-9a14-49a7-9a22-6fc324d7d4co",
@@ -860,7 +865,7 @@ Below are some sample messages. You can copy and publish them directly to your `
 }
 ```
 
-"Can you tell me when is the my next public holiday based on my country ?" → Sql & Search Agent
+"Can you tell me when is the my next public holiday based on my country ?" → mongo & Search Agent
 ```json
 {
   "message_id": "8f0e8192-9a14-49a7-9a22-6fc324d7d4ci",
@@ -916,6 +921,7 @@ If a user asked:
     export TF_VAR_cc_cloud_api_secret="<Confluent Cloud API Secret>"
     export TF_VAR_mongodbatlas_public_key="<MongoDB Public API Key>"
     export TF_VAR_mongodbatlas_private_key="<MongoDB Private API Key>"
+    export TF_VAR_mongodb_atlas_org_id="<MongoDB Atlas Org ID>
     export AWS_DEFAULT_REGION="us-west-2" #If using a Confluent-provided AWS account, make sure this region matches the region found in the above steps (most likely it will be us-west-2)
     export AWS_ACCESS_KEY_ID="<AWS Access Key ID"
     export AWS_SECRET_ACCESS_KEY="<AWS Access Key Secret>"
